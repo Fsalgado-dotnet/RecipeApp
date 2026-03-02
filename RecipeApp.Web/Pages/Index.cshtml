@@ -1,0 +1,221 @@
+﻿@page
+@model RecipeApp.Web.Pages.IndexModel
+@using RecipeApp.Web.Services
+@{
+    ViewData["Title"] = "Home";
+}
+
+@* --- SECÇÃO DE CABEÇALHO E FILTROS --- *@
+<div class="row mb-5 align-items-center">
+    <div class="col-md-6">
+        <h2 class="fw-bold"><i class="fas fa-utensils text-success me-2"></i>Receitas da Comunidade</h2>
+        <p class="text-muted">Descobre pratos incríveis aprovados por quem mais percebe.</p>
+    </div>
+    <div class="col-md-6 text-md-end">
+        <div class="btn-group shadow-sm rounded-pill overflow-hidden">
+            <button class="btn btn-success">Todas</button>
+            <button class="btn btn-white border">Populares</button>
+            <button class="btn btn-white border">Novas</button>
+        </div>
+    </div>
+
+    @* BARRA DE PESQUISA E FILTROS *@
+    <div class="col-12 mt-4">
+        <form method="get" id="filterForm">
+            <div class="row g-2 p-2 bg-white shadow-sm rounded-pill-custom border align-items-center">
+                <div class="col-lg-4">
+                    <div class="input-group border-0">
+                        <span class="input-group-text bg-transparent border-0 ps-3">
+                            <i class="fas fa-search text-muted"></i>
+                        </span>
+                        <input type="text" name="searchTerm" class="form-control border-0 shadow-none bg-transparent"
+                               placeholder="O que procuras?" value="@Request.Query["searchTerm"]">
+                    </div>
+                </div>
+
+                <div class="col-lg-3">
+                    <select name="categoryId" class="form-select border-0 shadow-none bg-light rounded-pill px-3">
+                        <option value="">Todas as Categorias</option>
+                        @foreach (var cat in Model.Categories)
+                        {
+                            <option value="@cat.CategoryId" selected="@(Request.Query["categoryId"] == cat.CategoryId.ToString())">
+                                @cat.Name
+                            </option>
+                        }
+                    </select>
+                </div>
+
+                <div class="col-lg-3">
+                    <select name="difficultyId" class="form-select border-0 shadow-none bg-light rounded-pill px-3">
+                        <option value="">Qualquer Dificuldade</option>
+                        @foreach (var diff in Model.Difficulties)
+                        {
+                            <option value="@diff.DifficultyId" selected="@(Request.Query["difficultyId"] == diff.DifficultyId.ToString())">
+                                @diff.Name
+                            </option>
+                        }
+                    </select>
+                </div>
+
+                <div class="col-lg-2">
+                    <button class="btn btn-success w-100 rounded-pill fw-bold py-2" type="submit">
+                        Filtrar
+                    </button>
+                </div>
+            </div>
+        </form>
+
+        @if (!string.IsNullOrEmpty(Request.Query["searchTerm"]) || !string.IsNullOrEmpty(Request.Query["categoryId"]) || !string.IsNullOrEmpty(Request.Query["difficultyId"]))
+        {
+            <p class="mt-3 ms-3 text-muted small">
+                <i class="fas fa-filter text-success me-1"></i> Filtros aplicados.
+                <a asp-page="/Index" class="text-danger ms-2 text-decoration-none fw-bold"><i class="fas fa-times"></i> Limpar Tudo</a>
+            </p>
+        }
+    </div>
+</div>
+
+@* --- LISTAGEM DE RECEITAS --- *@
+@if (Model.Recipes == null || Model.Recipes.Count == 0)
+{
+    <div class="text-center py-5">
+        <div class="display-1 text-muted opacity-25 mb-3">🍽️</div>
+        <h3 class="text-muted">Não encontramos receitas com esses critérios.</h3>
+        <div class="mt-4">
+            <a asp-page="/Index" class="btn btn-outline-secondary rounded-pill px-4 me-2">Ver Todas</a>
+            <a asp-page="/CreateRecipe" class="btn btn-success rounded-pill px-4">Criar Receita</a>
+        </div>
+    </div>
+}
+else
+{
+    <div class="row g-4">
+        @foreach (var recipe in Model.Recipes)
+        {
+            <div class="col-md-6 col-lg-4">
+                <div class="card h-100 border-0 shadow-sm recipe-card position-relative">
+
+                    <div class="position-relative">
+                        @* --- IMAGEM CORRIGIDA (Garante comida e varia por ID) --- *@
+                        <img src="https://loremflickr.com/500/350/food,cooking,recipe/all?lock=@recipe.RecipeId"
+                             class="card-img-top" alt="@recipe.Title"
+                             style="height: 220px; object-fit: cover; border-radius: 15px 15px 0 0;">
+
+                        <span class="badge bg-dark-glass position-absolute top-0 start-0 m-3 px-3 py-2 rounded-pill shadow-sm">
+                            @recipe.CategoryName
+                        </span>
+
+                        <div class="position-absolute top-0 end-0 m-3 d-flex gap-2">
+                            @if (SessionHelper.IsLoggedIn(HttpContext) && SessionHelper.GetUser(HttpContext)?.UserId == recipe.CreatedByUserId)
+                            {
+                                <form method="post" asp-page-handler="Delete" asp-route-id="@recipe.RecipeId" onsubmit="return confirm('Queres mesmo eliminar esta receita?');">
+                                    <button type="submit" class="bg-white border-0 p-2 rounded-circle shadow-sm text-danger hover-danger" title="Eliminar Receita">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </form>
+                            }
+
+                            @if (SessionHelper.IsLoggedIn(HttpContext))
+                            {
+                                <span class="bg-white p-2 rounded-circle shadow-sm @(recipe.IsFavorite ? "text-danger animate-pulse" : "text-muted opacity-75")">
+                                    <i class="@(recipe.IsFavorite ? "fas" : "far") fa-heart"></i>
+                                </span>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="card-body d-flex flex-column p-4">
+                        <h5 class="card-title fw-bold text-dark mb-3">@recipe.Title</h5>
+
+                        <div class="d-flex justify-content-between mb-4 text-muted small">
+                            <span><i class="fas fa-chart-line text-success me-1"></i> @recipe.DifficultyName</span>
+                            <span><i class="far fa-clock text-warning me-1"></i> @recipe.PreparationTime min</span>
+                        </div>
+
+                        <div class="mb-4">
+                            <div class="d-inline-flex align-items-center bg-light px-3 py-1 rounded-pill border">
+                                <i class="fas fa-star text-warning me-2"></i>
+                                <span class="fw-bold">@recipe.AverageRating.ToString("0.0")</span>
+                                <span class="text-muted ms-1">/ 5</span>
+                            </div>
+                        </div>
+
+                        <div class="mt-auto">
+                            <a asp-page="/RecipeDetails" asp-route-id="@recipe.RecipeId"
+                               class="btn btn-dark w-100 rounded-pill py-2 fw-semibold shadow-sm hover-lift">
+                                Ver Detalhes
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+<style>
+    .bg-dark-glass {
+        background: rgba(0, 0, 0, 0.6) !important;
+        backdrop-filter: blur(5px);
+        color: white;
+        font-weight: 500;
+    }
+
+    .rounded-pill-custom {
+        border-radius: 50px;
+    }
+
+    .recipe-card {
+        border-radius: 15px;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+        .recipe-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.1) !important;
+        }
+
+    .hover-lift:hover {
+        background-color: #27ae60 !important;
+        border-color: #27ae60 !important;
+        transform: scale(1.02);
+    }
+
+    .hover-danger:hover {
+        background-color: #dc3545 !important;
+        color: white !important;
+        transform: scale(1.1);
+    }
+
+    .animate-pulse {
+        display: inline-block;
+        animation: heartBeat 1.5s infinite;
+    }
+
+    @@keyframes heartBeat {
+        0% {
+            transform: scale(1);
+        }
+
+        14% {
+            transform: scale(1.1);
+        }
+
+        28% {
+            transform: scale(1);
+        }
+
+        42% {
+            transform: scale(1.1);
+        }
+
+        70% {
+            transform: scale(1);
+        }
+    }
+
+    .form-select:focus {
+        box-shadow: none;
+        background-color: #f8f9fa;
+    }
+</style>

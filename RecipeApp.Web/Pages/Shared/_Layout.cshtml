@@ -1,0 +1,151 @@
+﻿@using RecipeApp.Web.Services
+
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - ChefShare</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .bg-dark-glass {
+            background: rgba(33, 37, 41, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .nav-link {
+            transition: color 0.3s ease;
+        }
+
+            .nav-link:hover {
+                color: #198754 !important;
+            }
+
+        .hero-section {
+            background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('https://images.unsplash.com/photo-1495521821757-a1efb6729352?q=80&w=1500');
+            background-size: cover;
+            background-position: center;
+            min-height: 400px;
+        }
+    </style>
+</head>
+<body class="d-flex flex-column min-vh-100 bg-light">
+
+    <header class="sticky-top">
+        <nav class="navbar navbar-expand-lg navbar-dark bg-dark-glass shadow-sm">
+            <div class="container">
+                <a class="navbar-brand d-flex align-items-center" asp-page="/Index">
+                    <span class="fs-3 me-2">🍳</span>
+                    <span class="fw-bold">Chef<span class="text-success">Share</span></span>
+                </a>
+
+                <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <div class="collapse navbar-collapse" id="navbarMain">
+                    <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-4">
+                        <li class="nav-item">
+                            <a class="nav-link px-3" asp-page="/Index">Início</a>
+                        </li>
+
+                        @if (SessionHelper.IsLoggedIn(Context))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link px-3" asp-page="/CreateRecipe">Criar Receita</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link px-3" asp-page="/MyRecipes">Minhas Receitas</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link px-3" asp-page="/MyFavorites">
+                                    <i class="fas fa-heart text-danger me-1"></i> Favoritos
+                                </a>
+                            </li>
+                        }
+
+                        @if (SessionHelper.IsAdmin(Context))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link fw-bold text-warning px-3" asp-page="/Admin/ApproveRecipes">
+                                    <i class="fas fa-user-shield me-1"></i> Moderação
+                                </a>
+                            </li>
+                        }
+                    </ul>
+
+                    <ul class="navbar-nav ms-auto align-items-center">
+                        @if (!SessionHelper.IsLoggedIn(Context))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link me-3" asp-page="/Login">Entrar</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="btn btn-success rounded-pill px-4 shadow-sm fw-bold" asp-page="/Register">Registar</a>
+                            </li>
+                        }
+                        else
+                        {
+                            <li class="nav-item">
+                                <a class="btn btn-outline-light rounded-pill px-4 border-2" asp-page="/Logout">
+                                    <i class="fas fa-sign-out-alt me-1"></i> Sair
+                                </a>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    @if (ViewData["Title"]?.ToString() == "Home" || ViewData["Title"]?.ToString() == "Início")
+    {
+        <div class="hero-section text-white d-flex align-items-center shadow-lg mb-5">
+            <div class="container text-center text-lg-start">
+                <div class="row">
+                    <div class="col-lg-7">
+                        <h1 class="display-3 fw-bold mb-3">Descobre o sabor da culinária caseira</h1>
+                        <p class="lead mb-4 opacity-75">Milhares de receitas aprovadas pela comunidade para todos os momentos do teu dia.</p>
+                        <a href="#receitas" class="btn btn-success btn-lg rounded-pill px-5 py-3 fw-bold shadow">Explorar Receitas</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <main role="main" class="container pb-5" id="receitas">
+        @RenderBody()
+    </main>
+
+    <footer class="footer mt-auto py-4 bg-dark text-white-50 border-top border-secondary">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-6 text-center text-md-start mb-3 mb-md-0">
+                    <span class="fw-bold text-white">ChefShare</span> &copy; 2026 — Feito com ❤️ para amantes de comida.
+                </div>
+                <div class="col-md-6 text-center text-md-end">
+                    <a href="#" class="text-white-50 me-3 text-decoration-none"><i class="fab fa-instagram fs-4"></i></a>
+                    <a href="#" class="text-white-50 text-decoration-none"><i class="fab fa-facebook fs-4"></i></a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

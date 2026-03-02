@@ -1,0 +1,56 @@
+﻿@page
+@model RecipeApp.Web.Pages.EditRecipeModel
+
+<h2>✏️ Edit Recipe</h2>
+
+<form method="post">
+    <input type="hidden" asp-for="Recipe.RecipeId" />
+
+    <div class="mb-3">
+        <label class="form-label">Title</label>
+        <input asp-for="Recipe.Title" class="form-control" required />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Preparation method</label>
+        <textarea asp-for="Recipe.PreparationMethod"
+                  class="form-control"
+                  rows="4"
+                  required></textarea>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Preparation time (minutes)</label>
+        <input asp-for="Recipe.PreparationTime"
+               type="number"
+               class="form-control"
+               required />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Category</label>
+        <select asp-for="Recipe.CategoryId"
+                asp-items="Model.Categories"
+                class="form-select"
+                required>
+        </select>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Difficulty</label>
+        <select asp-for="Recipe.DifficultyId"
+                asp-items="Model.Difficulties"
+                class="form-select"
+                required>
+        </select>
+    </div>
+
+    <button class="btn btn-success">
+        💾 Save changes
+    </button>
+
+    <a asp-page="/MyRecipes"
+       class="btn btn-secondary ms-2">
+        Cancel
+    </a>
+</form>

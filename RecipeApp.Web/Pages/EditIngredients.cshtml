@@ -1,0 +1,78 @@
+﻿@page
+@model RecipeApp.Web.Pages.EditIngredientsModel
+
+<h2>🧂 Edit Ingredients</h2>
+
+<h4>@Model.Recipe.Title</h4>
+
+<hr />
+
+<h5>Current ingredients</h5>
+
+@if (Model.Ingredients.Count == 0)
+{
+    <p>No ingredients added yet.</p>
+}
+else
+{
+    <ul class="list-group mb-3">
+        @foreach (var ing in Model.Ingredients)
+        {
+            <li class="list-group-item d-flex justify-content-between">
+                <span>
+                    @ing.Quantity @ing.Unit — <strong>@ing.IngredientName</strong>
+                </span>
+
+                <form method="post" asp-page-handler="Remove">
+                    <input type="hidden" name="recipeId" value="@Model.Recipe.RecipeId" />
+                    <input type="hidden" name="ingredientId" value="@ing.IngredientId" />
+                    <button class="btn btn-sm btn-danger">❌</button>
+                </form>
+            </li>
+        }
+    </ul>
+}
+
+<hr />
+
+<h5>Add ingredient</h5>
+
+<form method="post" asp-page-handler="Add">
+    <input type="hidden" name="recipeId" value="@Model.Recipe.RecipeId" />
+
+    <div class="mb-2">
+        <select class="form-select" asp-for="IngredientId" required>
+            <option value="">Select ingredient</option>
+            @foreach (var i in Model.AllIngredients)
+            {
+                <option value="@i.IngredientId">@i.Name</option>
+            }
+        </select>
+    </div>
+
+    <div class="mb-2">
+        <input class="form-control"
+               asp-for="Quantity"
+               type="number"
+               step="0.01"
+               placeholder="Quantity"
+               required />
+    </div>
+
+    <div class="mb-2">
+        <input class="form-control"
+               asp-for="Unit"
+               placeholder="Unit (g, ml, pcs…)"
+               required />
+    </div>
+
+    <button class="btn btn-success">
+        ➕ Add ingredient
+    </button>
+</form>
+
+<hr />
+
+<a asp-page="/RecipeDetails" asp-route-id="@Model.Recipe.RecipeId">
+    ⬅ Back to recipe
+</a>

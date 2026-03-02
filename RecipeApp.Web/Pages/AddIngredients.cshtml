@@ -1,0 +1,55 @@
+﻿@page "{recipeId:long}"
+@model RecipeApp.Web.Pages.AddIngredientsModel
+
+<h2>🥕 Add Ingredients</h2>
+
+<form method="post">
+    <input type="hidden" name="recipeId" value="@Model.RecipeId" />
+
+    <div class="mb-3">
+        <label>Ingredient</label>
+        <select asp-for="IngredientId" class="form-select" required>
+            <option value="">-- Select ingredient --</option>
+            @foreach (var i in Model.Ingredients)
+            {
+                <option value="@i.IngredientId">@i.Name</option>
+            }
+        </select>
+    </div>
+
+    <div class="mb-3">
+        <label>Quantity</label>
+        <input asp-for="Quantity" class="form-control" required />
+    </div>
+
+    <div class="mb-3">
+        <label>Unit</label>
+        <input asp-for="Unit" class="form-control" placeholder="g, ml, cups..." />
+    </div>
+
+    <button class="btn btn-success">➕ Add ingredient</button>
+</form>
+
+<hr />
+
+<h4>Ingredients already added</h4>
+
+@if (Model.RecipeIngredients.Count == 0)
+{
+    <p>No ingredients yet.</p>
+}
+else
+{
+    <ul>
+        @foreach (var ri in Model.RecipeIngredients)
+        {
+            <li>
+                @ri.Quantity @ri.Unit - <strong>@ri.IngredientName</strong>
+            </li>
+        }
+    </ul>
+}
+
+<a asp-page="/Index" class="btn btn-secondary mt-3">
+    Finish recipe
+</a>

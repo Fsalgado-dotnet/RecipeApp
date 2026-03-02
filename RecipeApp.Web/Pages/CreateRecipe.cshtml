@@ -1,0 +1,116 @@
+﻿@page
+@model RecipeApp.Web.Pages.CreateRecipeModel
+@{
+    ViewData["Title"] = "Criar Receita";
+}
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="text-center mb-5">
+                <span class="badge bg-success-light text-success rounded-pill px-4 py-2 fw-bold mb-3 uppercase tracking-wider">
+                    Nova Partilha
+                </span>
+                <h1 class="fw-bold display-5">Partilha a tua Receita</h1>
+                <p class="text-muted">Preenche os detalhes abaixo para inspirar outros amantes da cozinha.</p>
+            </div>
+
+            <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+                <div class="bg-success" style="height: 6px; width: 100%;"></div>
+
+                <div class="card-body p-4 p-md-5">
+                    <form method="post">
+
+                        @if (!ViewData.ModelState.IsValid)
+                        {
+                            <div class="alert alert-danger border-0 rounded-3 shadow-sm mb-4">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <div asp-validation-summary="All" class="small d-inline"></div>
+                            </div>
+                        }
+
+                        <div class="row g-4">
+                            <div class="col-12">
+                                <label class="form-label fw-bold"><i class="fas fa-heading text-success me-2"></i>Título da Receita</label>
+                                <input asp-for="Recipe.Title" class="form-control form-control-lg border-0 bg-light rounded-3"
+                                       placeholder="Ex: Bacalhau à Brás Gourmet" required />
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label fw-bold"><i class="fas fa-utensils text-success me-2"></i>Modo de Preparação</label>
+                                <textarea asp-for="Recipe.PreparationMethod" class="form-control border-0 bg-light rounded-3"
+                                          rows="6" placeholder="Descreva o passo a passo..." required></textarea>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold"><i class="far fa-clock text-success me-2"></i>Tempo (min)</label>
+                                <div class="input-group">
+                                    <input asp-for="Recipe.PreparationTime" type="number" min="1"
+                                           class="form-control border-0 bg-light rounded-3 text-center" required />
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold"><i class="fas fa-list text-success me-2"></i>Categoria</label>
+                                <select asp-for="Recipe.CategoryId" class="form-select border-0 bg-light rounded-3" required>
+                                    <option value="">Selecionar...</option>
+                                    @foreach (var cat in Model.Categories)
+                                    {
+                                        <option value="@cat.CategoryId">@cat.Name</option>
+                                    }
+                                </select>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold"><i class="fas fa-signal text-success me-2"></i>Dificuldade</label>
+                                <select asp-for="Recipe.DifficultyId" class="form-select border-0 bg-light rounded-3" required>
+                                    <option value="">Selecionar...</option>
+                                    @foreach (var diff in Model.Difficulties)
+                                    {
+                                        <option value="@diff.DifficultyId">@diff.Name</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mt-5 d-flex gap-3">
+                            <button type="submit" class="btn btn-success btn-lg rounded-pill px-5 flex-grow-1 shadow-sm transition-hover">
+                                <i class="fas fa-save me-2"></i>Publicar Receita
+                            </button>
+                            <a asp-page="/Index" class="btn btn-light btn-lg rounded-pill px-4 text-muted border">
+                                Cancelar
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="mt-4 text-center">
+                <p class="small text-muted">
+                    <i class="fas fa-lightbulb text-warning me-1"></i>
+                    <strong>Dica:</strong> Após salvar, poderá adicionar os ingredientes específicos na página de detalhes.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .bg-success-light {
+        background-color: rgba(39, 174, 96, 0.1);
+    }
+
+    .form-control:focus, .form-select:focus {
+        background-color: #fff !important;
+        box-shadow: 0 0 0 4px rgba(39, 174, 96, 0.15) !important;
+        border: 1px solid var(--primary-color) !important;
+    }
+
+    .transition-hover {
+        transition: all 0.3s ease;
+    }
+
+        .transition-hover:hover {
+            transform: translateY(-3px);
+        }
+</style>

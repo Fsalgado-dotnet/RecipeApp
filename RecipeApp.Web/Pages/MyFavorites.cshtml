@@ -1,0 +1,93 @@
+﻿@page
+@model RecipeApp.Web.Pages.MyFavoritesModel
+@{
+    ViewData["Title"] = "Os Meus Favoritos";
+}
+
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-5 flex-wrap gap-3">
+        <div>
+            <h2 class="fw-bold mb-1">
+                <i class="fas fa-heart text-danger me-2"></i>As Minhas Escolhas
+            </h2>
+            <p class="text-muted mb-0">Todas as receitas que guardaste para cozinhar mais tarde.</p>
+        </div>
+        <a asp-page="/Index" class="btn btn-outline-dark rounded-pill px-4">
+            <i class="fas fa-search me-2"></i>Explorar Mais
+        </a>
+    </div>
+
+    @if (Model.Recipes == null || Model.Recipes.Count == 0)
+    {
+        <div class="card border-0 shadow-sm rounded-4 text-center py-5">
+            <div class="card-body">
+                <div class="display-1 text-muted opacity-25 mb-3">
+                    <i class="fas fa-heart-broken"></i>
+                </div>
+                <h4 class="text-secondary fw-bold">A lista está vazia!</h4>
+                <p class="text-muted mb-4">Ainda não tens receitas favoritas. Começa a explorar e clica no ❤️ das receitas que mais gostares.</p>
+                <a asp-page="/Index" class="btn btn-danger rounded-pill px-5 shadow-sm">
+                    Ir para as Receitas
+                </a>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="row g-4">
+            @foreach (var r in Model.Recipes)
+            {
+                <div class="col-md-6 col-lg-4 animate__animated animate__fadeIn">
+                    <div class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden recipe-card">
+                        <div class="position-relative">
+                            <img src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=800" class="card-img-top" style="height: 200px; object-fit: cover;" alt="@r.Title">
+                            <span class="badge bg-white text-dark position-absolute top-0 end-0 m-3 rounded-pill shadow-sm">
+                                <i class="far fa-clock text-warning me-1"></i> @r.PreparationTime min
+                            </span>
+                        </div>
+
+                        <div class="card-body p-4">
+                            <div class="mb-2">
+                                <small class="text-success fw-bold text-uppercase">@r.CategoryName</small>
+                            </div>
+                            <h5 class="card-title fw-bold mb-3 text-dark">@r.Title</h5>
+
+                            <div class="d-flex align-items-center gap-2 mb-4 text-muted small">
+                                <span><i class="fas fa-signal me-1"></i> @r.DifficultyName</span>
+                            </div>
+
+                            <div class="d-flex gap-2">
+                                <a asp-page="/RecipeDetails" asp-route-id="@r.RecipeId"
+                                   class="btn btn-primary rounded-pill w-100">
+                                    <i class="fas fa-eye me-2"></i>Ver
+                                </a>
+
+                                <form method="post" asp-page-handler="Remove" asp-route-id="@r.RecipeId" class="d-inline">
+                                    <button type="submit" class="btn btn-outline-danger rounded-circle p-2 px-3" title="Remover dos favoritos">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<style>
+    .recipe-card {
+        transition: all 0.3s ease;
+    }
+
+        .recipe-card:hover {
+            transform: translateY(-8px);
+            shadow: 0 1rem 3rem rgba(0,0,0,.175) !important;
+        }
+
+    .btn-outline-danger:hover {
+        background-color: #dc3545;
+        color: white;
+    }
+</style>
