@@ -1,5 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.RazorPages;
+﻿using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.Extensions.Logging;
 
 namespace RecipeApp.Web.Pages
 {
@@ -14,7 +14,7 @@ namespace RecipeApp.Web.Pages
 
         public void OnGet()
         {
+            // Geralmente vazia, serve apenas para renderizar o texto estático
         }
     }
-
 }

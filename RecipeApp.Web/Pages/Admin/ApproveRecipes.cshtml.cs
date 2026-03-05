@@ -1,28 +1,29 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using RecipeApp.Web.DAL;
 using RecipeApp.Web.Models;
-using RecipeApp.Web.Services;
+using RecipeApp.Web.Services; // Importante, deu-me erro umas vezes por nao chamar a SessionHelper aqui
 
 namespace RecipeApp.Web.Pages.Admin
 {
     public class ApproveRecipesModel : PageModel
     {
-        private readonly RecipeDAL _recipeDAL;
+        private readonly RecipeService _recipeService;
 
-        public ApproveRecipesModel(RecipeDAL recipeDAL)
+        // Injetamos o Service aqui
+        public ApproveRecipesModel(RecipeService recipeService)
         {
-            _recipeDAL = recipeDAL;
+            _recipeService = recipeService;
         }
 
-        public List<Recipe> PendingRecipes { get; set; }
+        public List<Recipe> PendingRecipes { get; set; } = new();
 
         public IActionResult OnGet()
         {
             if (!SessionHelper.IsAdmin(HttpContext))
                 return RedirectToPage("/Index");
 
-            PendingRecipes = _recipeDAL.GetPendingRecipes();
+            // Usamos o Service agora
+            PendingRecipes = _recipeService.GetPendingRecipes();
             return Page();
         }
 
@@ -31,7 +32,8 @@ namespace RecipeApp.Web.Pages.Admin
             if (!SessionHelper.IsAdmin(HttpContext))
                 return RedirectToPage("/Index");
 
-            _recipeDAL.ApproveRecipe(recipeId);
+            _recipeService.ApproveRecipe(recipeId);
+            TempData["SuccessMessage"] = "Receita aprovada com sucesso!";
             return RedirectToPage();
         }
     }

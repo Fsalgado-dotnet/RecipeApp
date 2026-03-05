@@ -1,58 +1,70 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using RecipeApp.Web.DAL;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using RecipeApp.Web.Models;
 using RecipeApp.Web.Services;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace RecipeApp.Web.Pages
 {
     public class CreateRecipeModel : PageModel
     {
-        private readonly RecipeDAL _recipeDAL;
-        private readonly CategoryDAL _categoryDAL;
-        private readonly DifficultyDAL _difficultyDAL;
+        private readonly RecipeService _recipeService;
+        private readonly CategoryService _categoryService;
+        private readonly DifficultyService _difficultyService;
 
         public CreateRecipeModel(
-            RecipeDAL recipeDAL,
-            CategoryDAL categoryDAL,
-            DifficultyDAL difficultyDAL)
+            RecipeService recipeService,
+            CategoryService categoryService,
+            DifficultyService difficultyService)
         {
-            _recipeDAL = recipeDAL;
-            _categoryDAL = categoryDAL;
-            _difficultyDAL = difficultyDAL;
+            _recipeService = recipeService;
+            _categoryService = categoryService;
+            _difficultyService = difficultyService;
         }
 
         [BindProperty]
-        public Recipe Recipe { get; set; }
+        public Recipe Recipe { get; set; } = new();
 
-        public List<Category> Categories { get; set; } = new();
-        public List<Difficulty> Difficulties { get; set; } = new();
+        public List<SelectListItem> CategoryOptions { get; set; } = new();
+        public List<SelectListItem> DifficultyOptions { get; set; } = new();
 
         public IActionResult OnGet()
         {
             if (!SessionHelper.IsLoggedIn(HttpContext))
                 return RedirectToPage("/Login");
 
-            Categories = _categoryDAL.GetAll();
-            Difficulties = _difficultyDAL.GetAll();
-
+            LoadDropdowns();
             return Page();
         }
 
         public IActionResult OnPost()
         {
-            if (!SessionHelper.IsLoggedIn(HttpContext))
-                return RedirectToPage("/Login");
-
             var user = SessionHelper.GetUser(HttpContext);
+            if (user == null) return RedirectToPage("/Login");
 
-            Recipe.CreatedByUserId = user.UserId;
-            Recipe.IsApproved = false;
-            Recipe.CreatedAt = DateTime.Now;
+            
+            _recipeService.CreateRecipe(Recipe, user.UserId);
 
-            _recipeDAL.CreateRecipe(Recipe);
+            TempData["SuccessMessage"] = "Receita enviada com sucesso! Aguarde a aprovação.";
 
+            // Redirecionamos para o Index ou para as receitas
             return RedirectToPage("/Index");
+        }
+
+        private void LoadDropdowns()
+        {
+          
+            var categories = _categoryService.GetAllCategories();
+            CategoryOptions = categories
+                .Select(c => new SelectListItem { Value = c.CategoryId.ToString(), Text = c.Name })
+                .ToList();
+
+            var difficulties = _difficultyService.GetAll();
+            DifficultyOptions = difficulties
+                .Select(d => new SelectListItem { Value = d.DifficultyId.ToString(), Text = d.Name })
+                .ToList();
         }
     }
 }

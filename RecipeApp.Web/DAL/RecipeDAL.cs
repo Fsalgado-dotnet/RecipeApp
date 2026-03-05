@@ -2,6 +2,7 @@
 using RecipeApp.Web.Models;
 using System;
 using System.Collections.Generic;
+using System.Data;
 
 namespace RecipeApp.Web.DAL
 {
@@ -14,342 +15,294 @@ namespace RecipeApp.Web.DAL
             _db = db;
         }
 
-        // ============================================================
-        // LISTAR RECEITAS APROVADAS (INDEX) - COM FILTROS DINÂMICOS
-        // ============================================================
-        public List<Recipe> GetApprovedRecipes(long? userId = null, string searchTerm = null, long? categoryId = null, long? difficultyId = null)
+        // --- FAVORITOS ---
+        public List<Recipe> GetFavoriteRecipes(long userId)
         {
             var recipes = new List<Recipe>();
             using var connection = _db.GetConnection();
 
             string sql = @"
-                SELECT 
-                    r.RecipeId,
-                    r.Title,
-                    r.PreparationTime,
-                    r.IsApproved,
-                    r.CreatedAt,
-                    r.CreatedByUserId,
-                    c.Name AS CategoryName,
-                    d.Name AS DifficultyName,
-                    ISNULL(AVG(CAST(rt.Value AS FLOAT)), 0) AS AverageRating,
-                    CASE 
-                        WHEN f.UserId IS NULL THEN 0 
-                        ELSE 1 
-                    END AS IsFavorite
+                SELECT r.*, c.Name AS CategoryName, d.Name AS DifficultyName,
+                       1 AS IsFavorite,
+                       ISNULL((SELECT AVG(CAST(Value AS FLOAT)) FROM Rating WHERE RecipeId = r.RecipeId), 0) AS AverageRating,
+                       (SELECT COUNT(*) FROM RecipeIngredient WHERE RecipeId = r.RecipeId) AS IngredientsCount
                 FROM Recipe r
+                INNER JOIN Favourite f ON r.RecipeId = f.RecipeId
                 INNER JOIN Category c ON r.CategoryId = c.CategoryId
                 INNER JOIN Difficulty d ON r.DifficultyId = d.DifficultyId
-                LEFT JOIN Rating rt ON r.RecipeId = rt.RecipeId
-                LEFT JOIN Favourite f 
-                    ON r.RecipeId = f.RecipeId
-                    AND f.UserId = @UserId
-                WHERE r.IsApproved = 1 "; // Só mostra as que estão aprovadas (e não apagadas)
-
-            // --- Injeção de Filtros Dinâmicos ---
-            if (!string.IsNullOrEmpty(searchTerm))
-            {
-                sql += " AND r.Title LIKE @Search ";
-            }
-
-            if (categoryId.HasValue && categoryId > 0)
-            {
-                sql += " AND r.CategoryId = @CatId ";
-            }
-
-            if (difficultyId.HasValue && difficultyId > 0)
-            {
-                sql += " AND r.DifficultyId = @DiffId ";
-            }
-
-            sql += @" GROUP BY 
-                        r.RecipeId,
-                        r.Title,
-                        r.PreparationTime,
-                        r.IsApproved,
-                        r.CreatedAt,
-                        r.CreatedByUserId,
-                        c.Name,
-                        d.Name,
-                        f.UserId
-                    ORDER BY r.CreatedAt DESC";
+                WHERE f.UserId = @UserId AND r.IsApproved = 1
+                ORDER BY r.CreatedAt DESC";
 
             using var cmd = new SqlCommand(sql, connection);
-
-            // Parâmetros base
-            cmd.Parameters.AddWithValue("@UserId", (object?)userId ?? DBNull.Value);
-
-            // Parâmetros Condicionais
-            if (!string.IsNullOrEmpty(searchTerm))
-            {
-                cmd.Parameters.AddWithValue("@Search", "%" + searchTerm + "%");
-            }
-
-            if (categoryId.HasValue && categoryId > 0)
-            {
-                cmd.Parameters.AddWithValue("@CatId", categoryId.Value);
-            }
-
-            if (difficultyId.HasValue && difficultyId > 0)
-            {
-                cmd.Parameters.AddWithValue("@DiffId", difficultyId.Value);
-            }
+            cmd.Parameters.AddWithValue("@UserId", userId);
 
             connection.Open();
             using var reader = cmd.ExecuteReader();
-
-            while (reader.Read())
-            {
-                recipes.Add(new Recipe
-                {
-                    RecipeId = (long)reader["RecipeId"],
-                    Title = reader["Title"]?.ToString() ?? string.Empty,
-                    PreparationTime = (int)reader["PreparationTime"],
-                    CategoryName = reader["CategoryName"]?.ToString() ?? string.Empty,
-                    DifficultyName = reader["DifficultyName"]?.ToString() ?? string.Empty,
-                    AverageRating = Convert.ToDouble(reader["AverageRating"]),
-                    IsFavorite = Convert.ToInt32(reader["IsFavorite"]) == 1,
-                    CreatedByUserId = (long)reader["CreatedByUserId"] // Necessário para o botão apagar
-                });
-            }
-
+            while (reader.Read()) { recipes.Add(MapFromReader(reader)); }
             return recipes;
         }
 
-        // ===============================
-        // DETALHE DA RECEITA
-        // ===============================
-        public Recipe? GetRecipeById(long recipeId)
+        public void ToggleFavorite(long userId, long recipeId)
         {
             using var connection = _db.GetConnection();
-
             string sql = @"
-                SELECT 
-                    r.RecipeId,
-                    r.Title,
-                    CAST(r.PreparationMethod AS NVARCHAR(MAX)) AS PreparationMethod,
-                    r.PreparationTime,
-                    r.CreatedAt,
-                    r.CreatedByUserId,
-                    c.Name AS CategoryName,
-                    d.Name AS DifficultyName,
-                    ISNULL(AVG(CAST(rt.Value AS FLOAT)), 0) AS AverageRating
+                IF EXISTS (SELECT 1 FROM Favourite WHERE UserId = @UserId AND RecipeId = @RecipeId)
+                BEGIN
+                    DELETE FROM Favourite WHERE UserId = @UserId AND RecipeId = @RecipeId
+                END
+                ELSE
+                BEGIN
+                    INSERT INTO Favourite (UserId, RecipeId) VALUES (@UserId, @RecipeId)
+                END";
+
+            using var cmd = new SqlCommand(sql, connection);
+            cmd.Parameters.AddWithValue("@UserId", userId);
+            cmd.Parameters.AddWithValue("@RecipeId", recipeId);
+
+            connection.Open();
+            cmd.ExecuteNonQuery();
+        }
+
+        // --- LISTAGEM GERAL (HOME) ---
+        // Atualizado para aceitar o parâmetro 'sort' das abas
+        public List<Recipe> GetApprovedRecipes(long? userId, string? searchTerm, long? categoryId, long? difficultyId, string sort = "Todas")
+        {
+            var recipes = new List<Recipe>();
+            using var connection = _db.GetConnection();
+            string sql = @"
+                SELECT r.*, c.Name AS CategoryName, d.Name AS DifficultyName,
+                       ISNULL((SELECT AVG(CAST(Value AS FLOAT)) FROM Rating WHERE RecipeId = r.RecipeId), 0) AS AverageRating,
+                       CASE WHEN f.UserId IS NULL THEN 0 ELSE 1 END AS IsFavorite,
+                       (SELECT COUNT(*) FROM RecipeIngredient WHERE RecipeId = r.RecipeId) AS IngredientsCount
                 FROM Recipe r
                 INNER JOIN Category c ON r.CategoryId = c.CategoryId
                 INNER JOIN Difficulty d ON r.DifficultyId = d.DifficultyId
-                LEFT JOIN Rating rt ON r.RecipeId = rt.RecipeId
-                WHERE r.RecipeId = @RecipeId
-                GROUP BY
-                    r.RecipeId,
-                    r.Title,
-                    CAST(r.PreparationMethod AS NVARCHAR(MAX)),
-                    r.PreparationTime,
-                    r.CreatedAt,
-                    r.CreatedByUserId,
-                    c.Name,
-                    d.Name
-            ";
+                LEFT JOIN Favourite f ON r.RecipeId = f.RecipeId AND f.UserId = @UserId
+                WHERE r.IsApproved = 1 ";
 
-            using var cmd = new SqlCommand(sql, connection);
-            cmd.Parameters.AddWithValue("@RecipeId", recipeId);
+            // Filtros de busca
+            if (!string.IsNullOrEmpty(searchTerm)) sql += " AND r.Title LIKE @Search ";
+            if (categoryId > 0) sql += " AND r.CategoryId = @CatId ";
+            if (difficultyId > 0) sql += " AND r.DifficultyId = @DiffId ";
 
-            connection.Open();
-            using var reader = cmd.ExecuteReader();
-
-            if (!reader.Read())
-                return null;
-
-            return new Recipe
+            // Lógica de Ordenação das Abas
+            if (sort == "Populares")
             {
-                RecipeId = (long)reader["RecipeId"],
-                Title = reader["Title"]?.ToString() ?? string.Empty,
-                PreparationMethod = reader["PreparationMethod"]?.ToString() ?? string.Empty,
-                PreparationTime = (int)reader["PreparationTime"],
-                CategoryName = reader["CategoryName"]?.ToString() ?? string.Empty,
-                DifficultyName = reader["DifficultyName"]?.ToString() ?? string.Empty,
-                AverageRating = Convert.ToDouble(reader["AverageRating"]),
-                CreatedAt = (DateTime)reader["CreatedAt"],
-                CreatedByUserId = (long)reader["CreatedByUserId"]
-            };
-        }
-
-        // ===============================
-        // RECEITAS DO UTILIZADOR
-        // ===============================
-        public List<Recipe> GetByUser(long userId)
-        {
-            var list = new List<Recipe>();
-            using var connection = _db.GetConnection();
-
-            string sql = @"
-                SELECT 
-                    RecipeId,
-                    Title,
-                    IsApproved,
-                    CreatedAt,
-                    CreatedByUserId
-                FROM Recipe
-                WHERE CreatedByUserId = @UserId
-                ORDER BY CreatedAt DESC
-            ";
-
-            using var cmd = new SqlCommand(sql, connection);
-            cmd.Parameters.AddWithValue("@UserId", userId);
-
-            connection.Open();
-            using var reader = cmd.ExecuteReader();
-
-            while (reader.Read())
+                sql += " ORDER BY AverageRating DESC ";
+            }
+            else if (sort == "Novas")
             {
-                list.Add(new Recipe
-                {
-                    RecipeId = (long)reader["RecipeId"],
-                    Title = reader["Title"]?.ToString() ?? string.Empty,
-                    IsApproved = (bool)reader["IsApproved"],
-                    CreatedAt = (DateTime)reader["CreatedAt"],
-                    CreatedByUserId = (long)reader["CreatedByUserId"]
-                });
+                sql += " ORDER BY r.CreatedAt DESC ";
+            }
+            else
+            {
+                // Padrão "Todas" ordena por Nome ou Data
+                sql += " ORDER BY r.Title ASC ";
             }
 
-            return list;
-        }
-
-        // ============================================================
-        // ELIMINAR RECEITA (SOFT DELETE)
-        // Só permite se o UserId coincidir com o criador
-        // ============================================================
-        public bool DeleteRecipe(long recipeId, long userId)
-        {
-            using var connection = _db.GetConnection();
-
-            // Mudamos IsApproved para 0. A receita continua na DB, mas sai do Index.
-            string sql = @"
-                UPDATE Recipe 
-                SET IsApproved = 0 
-                WHERE RecipeId = @RecipeId AND CreatedByUserId = @UserId";
-
             using var cmd = new SqlCommand(sql, connection);
-            cmd.Parameters.AddWithValue("@RecipeId", recipeId);
-            cmd.Parameters.AddWithValue("@UserId", userId);
+            cmd.Parameters.AddWithValue("@UserId", (object?)userId ?? DBNull.Value);
+            if (!string.IsNullOrEmpty(searchTerm)) cmd.Parameters.AddWithValue("@Search", "%" + searchTerm + "%");
+            if (categoryId > 0) cmd.Parameters.AddWithValue("@CatId", categoryId.Value);
+            if (difficultyId > 0) cmd.Parameters.AddWithValue("@DiffId", difficultyId.Value);
 
             connection.Open();
-            int rowsAffected = cmd.ExecuteNonQuery();
-
-            return rowsAffected > 0;
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read()) { recipes.Add(MapFromReader(reader)); }
+            return recipes;
         }
 
-        // ===============================
-        // CRIAR RECEITA
-        // ===============================
-        public void CreateRecipe(Recipe recipe)
-        {
-            using var connection = _db.GetConnection();
-
-            string sql = @"
-                INSERT INTO Recipe
-                (Title, PreparationMethod, PreparationTime, CategoryId, DifficultyId, CreatedByUserId, IsApproved, CreatedAt)
-                VALUES
-                (@Title, @Method, @Time, @CategoryId, @DifficultyId, @UserId, @Approved, GETDATE())
-            ";
-
-            using var cmd = new SqlCommand(sql, connection);
-            cmd.Parameters.AddWithValue("@Title", recipe.Title);
-            cmd.Parameters.AddWithValue("@Method", recipe.PreparationMethod);
-            cmd.Parameters.AddWithValue("@Time", recipe.PreparationTime);
-            cmd.Parameters.AddWithValue("@CategoryId", recipe.CategoryId);
-            cmd.Parameters.AddWithValue("@DifficultyId", recipe.DifficultyId);
-            cmd.Parameters.AddWithValue("@UserId", recipe.CreatedByUserId);
-            cmd.Parameters.AddWithValue("@Approved", recipe.IsApproved);
-
-            connection.Open();
-            cmd.ExecuteNonQuery();
-        }
-
-        // ===============================
-        // APROVAR RECEITA (ADMIN)
-        // ===============================
-        public void ApproveRecipe(long recipeId)
-        {
-            using var connection = _db.GetConnection();
-
-            string sql = @"
-                UPDATE Recipe
-                SET IsApproved = 1
-                WHERE RecipeId = @RecipeId
-            ";
-
-            using var cmd = new SqlCommand(sql, connection);
-            cmd.Parameters.AddWithValue("@RecipeId", recipeId);
-
-            connection.Open();
-            cmd.ExecuteNonQuery();
-        }
-
-        // ===============================
-        // LISTAR RECEITAS PENDENTES (ADMIN)
-        // ===============================
+        // --- GESTÃO E ADMIN ---
         public List<Recipe> GetPendingRecipes()
         {
             var recipes = new List<Recipe>();
             using var connection = _db.GetConnection();
-
             string sql = @"
-                SELECT 
-                    r.RecipeId,
-                    r.Title,
-                    r.CreatedAt,
-                    u.Name AS AuthorName
+                SELECT r.*, c.Name AS CategoryName, d.Name AS DifficultyName, 
+                       0 AS AverageRating, 0 AS IsFavorite,
+                       (SELECT COUNT(*) FROM RecipeIngredient WHERE RecipeId = r.RecipeId) AS IngredientsCount
                 FROM Recipe r
-                INNER JOIN Users u ON r.CreatedByUserId = u.UserId
-                WHERE r.IsApproved = 0
-                ORDER BY r.CreatedAt DESC
-            ";
+                INNER JOIN Category c ON r.CategoryId = c.CategoryId
+                INNER JOIN Difficulty d ON r.DifficultyId = d.DifficultyId
+                WHERE r.IsApproved = 0 
+                ORDER BY r.CreatedAt ASC";
 
             using var cmd = new SqlCommand(sql, connection);
             connection.Open();
-
             using var reader = cmd.ExecuteReader();
-            while (reader.Read())
-            {
-                recipes.Add(new Recipe
-                {
-                    RecipeId = (long)reader["RecipeId"],
-                    Title = reader["Title"]?.ToString() ?? string.Empty,
-                    CreatedAt = (DateTime)reader["CreatedAt"]
-                });
-            }
-
+            while (reader.Read()) { recipes.Add(MapFromReader(reader)); }
             return recipes;
         }
 
-        // ===============================
-        // EDITAR RECEITA
-        // ===============================
-        public void Update(Recipe recipe)
+        public List<Recipe> GetRecipesByUserId(long userId)
         {
+            var recipes = new List<Recipe>();
             using var connection = _db.GetConnection();
-
             string sql = @"
-                UPDATE Recipe
-                SET
-                    Title = @Title,
-                    PreparationMethod = @Method,
-                    PreparationTime = @Time,
-                    CategoryId = @CategoryId,
-                    DifficultyId = @DifficultyId
-                WHERE RecipeId = @RecipeId
-            ";
+                SELECT r.*, c.Name AS CategoryName, d.Name AS DifficultyName, 
+                       ISNULL((SELECT AVG(CAST(Value AS FLOAT)) FROM Rating WHERE RecipeId = r.RecipeId), 0) AS AverageRating,
+                       CASE WHEN (SELECT 1 FROM Favourite WHERE UserId = @UserId AND RecipeId = r.RecipeId) IS NULL THEN 0 ELSE 1 END AS IsFavorite,
+                       (SELECT COUNT(*) FROM RecipeIngredient WHERE RecipeId = r.RecipeId) AS IngredientsCount
+                FROM Recipe r
+                INNER JOIN Category c ON r.CategoryId = c.CategoryId
+                INNER JOIN Difficulty d ON r.DifficultyId = d.DifficultyId
+                WHERE r.CreatedByUserId = @UserId AND r.IsApproved >= 0
+                ORDER BY r.CreatedAt DESC";
 
             using var cmd = new SqlCommand(sql, connection);
-            cmd.Parameters.AddWithValue("@Title", recipe.Title);
-            cmd.Parameters.AddWithValue("@Method", recipe.PreparationMethod);
-            cmd.Parameters.AddWithValue("@Time", recipe.PreparationTime);
-            cmd.Parameters.AddWithValue("@CategoryId", recipe.CategoryId);
-            cmd.Parameters.AddWithValue("@DifficultyId", recipe.DifficultyId);
-            cmd.Parameters.AddWithValue("@RecipeId", recipe.RecipeId);
+            cmd.Parameters.AddWithValue("@UserId", userId);
+            connection.Open();
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read()) { recipes.Add(MapFromReader(reader)); }
+            return recipes;
+        }
 
+        public Recipe? GetRecipeById(long id)
+        {
+            using var connection = _db.GetConnection();
+            string sql = @"
+                SELECT r.*, c.Name AS CategoryName, d.Name AS DifficultyName, 
+                ISNULL((SELECT AVG(CAST(Value AS FLOAT)) FROM Rating WHERE RecipeId = r.RecipeId), 0) AS AverageRating,
+                0 AS IsFavorite,
+                (SELECT COUNT(*) FROM RecipeIngredient WHERE RecipeId = r.RecipeId) AS IngredientsCount
+                FROM Recipe r 
+                INNER JOIN Category c ON r.CategoryId = c.CategoryId 
+                INNER JOIN Difficulty d ON r.DifficultyId = d.DifficultyId 
+                WHERE r.RecipeId = @Id";
+
+            using var cmd = new SqlCommand(sql, connection);
+            cmd.Parameters.AddWithValue("@Id", id);
+            connection.Open();
+            using var reader = cmd.ExecuteReader();
+            return reader.Read() ? MapFromReader(reader) : null;
+        }
+
+        // --- CRUD BÁSICO ---
+        public void CreateRecipe(Recipe r)
+        {
+            using var connection = _db.GetConnection();
+            string sql = "INSERT INTO Recipe (Title, PreparationMethod, PreparationTime, CategoryId, DifficultyId, CreatedByUserId, IsApproved, CreatedAt) VALUES (@T, @M, @P, @C, @D, @U, 0, GETDATE())";
+            using var cmd = new SqlCommand(sql, connection);
+            cmd.Parameters.AddWithValue("@T", r.Title);
+            cmd.Parameters.AddWithValue("@M", r.PreparationMethod);
+            cmd.Parameters.AddWithValue("@P", r.PreparationTime);
+            cmd.Parameters.AddWithValue("@C", r.CategoryId);
+            cmd.Parameters.AddWithValue("@D", r.DifficultyId);
+            cmd.Parameters.AddWithValue("@U", r.CreatedByUserId);
             connection.Open();
             cmd.ExecuteNonQuery();
+        }
+
+        public void UpdateRecipe(Recipe r)
+        {
+            using var connection = _db.GetConnection();
+            string sql = "UPDATE Recipe SET Title=@T, PreparationMethod=@M, PreparationTime=@P, CategoryId=@C, DifficultyId=@D WHERE RecipeId=@Id";
+            using var cmd = new SqlCommand(sql, connection);
+            cmd.Parameters.AddWithValue("@T", r.Title);
+            cmd.Parameters.AddWithValue("@M", r.PreparationMethod);
+            cmd.Parameters.AddWithValue("@P", r.PreparationTime);
+            cmd.Parameters.AddWithValue("@C", r.CategoryId);
+            cmd.Parameters.AddWithValue("@D", r.DifficultyId);
+            cmd.Parameters.AddWithValue("@Id", r.RecipeId);
+            connection.Open();
+            cmd.ExecuteNonQuery();
+        }
+
+        public bool DeleteRecipe(long recipeId, long userId)
+        {
+            using var connection = _db.GetConnection();
+            string sql = "UPDATE Recipe SET IsApproved = -1 WHERE RecipeId = @Rid AND CreatedByUserId = @Uid";
+            using var cmd = new SqlCommand(sql, connection);
+            cmd.Parameters.AddWithValue("@Rid", recipeId);
+            cmd.Parameters.AddWithValue("@Uid", userId);
+            connection.Open();
+            return cmd.ExecuteNonQuery() > 0;
+        }
+
+        public void ApproveRecipe(long id)
+        {
+            using var connection = _db.GetConnection();
+            using var cmd = new SqlCommand("UPDATE Recipe SET IsApproved = 1 WHERE RecipeId = @Id", connection);
+            cmd.Parameters.AddWithValue("@Id", id);
+            connection.Open();
+            cmd.ExecuteNonQuery();
+        }
+
+        // --- INGREDIENTES ---
+        public List<Ingredient> GetIngredientsByRecipeId(long id)
+        {
+            var list = new List<Ingredient>();
+            using var connection = _db.GetConnection();
+            string sql = "SELECT i.IngredientId, i.Name, ri.Quantity FROM Ingredient i INNER JOIN RecipeIngredient ri ON i.IngredientId = ri.IngredientId WHERE ri.RecipeId = @Id";
+            using var cmd = new SqlCommand(sql, connection);
+            cmd.Parameters.AddWithValue("@Id", id);
+            connection.Open();
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                list.Add(new Ingredient
+                {
+                    IngredientId = Convert.ToInt64(reader["IngredientId"]),
+                    Name = reader["Name"]?.ToString() ?? "",
+                    Quantity = reader["Quantity"]?.ToString() ?? ""
+                });
+            }
+            return list;
+        }
+
+        public void AddIngredientToRecipe(long rid, long iid, string qty)
+        {
+            using var connection = _db.GetConnection();
+            using var cmd = new SqlCommand("INSERT INTO RecipeIngredient (RecipeId, IngredientId, Quantity) VALUES (@R, @I, @Q)", connection);
+            cmd.Parameters.AddWithValue("@R", rid);
+            cmd.Parameters.AddWithValue("@I", iid);
+            cmd.Parameters.AddWithValue("@Q", qty);
+            connection.Open();
+            cmd.ExecuteNonQuery();
+        }
+
+        public void DeleteIngredientFromRecipe(long rid, long iid)
+        {
+            using var connection = _db.GetConnection();
+            using var cmd = new SqlCommand("DELETE FROM RecipeIngredient WHERE RecipeId=@R AND IngredientId=@I", connection);
+            cmd.Parameters.AddWithValue("@R", rid);
+            cmd.Parameters.AddWithValue("@I", iid);
+            connection.Open();
+            cmd.ExecuteNonQuery();
+        }
+
+        // --- MAPEAMENTO ---
+        private Recipe MapFromReader(SqlDataReader reader)
+        {
+            return new Recipe
+            {
+                RecipeId = Convert.ToInt64(reader["RecipeId"]),
+                Title = reader["Title"]?.ToString() ?? "",
+                PreparationMethod = reader["PreparationMethod"]?.ToString() ?? "",
+                PreparationTime = Convert.ToInt32(reader["PreparationTime"]),
+                CategoryId = Convert.ToInt32(reader["CategoryId"]),
+                DifficultyId = Convert.ToInt32(reader["DifficultyId"]),
+                CreatedByUserId = Convert.ToInt64(reader["CreatedByUserId"]),
+                CategoryName = reader["CategoryName"]?.ToString() ?? "",
+                DifficultyName = reader["DifficultyName"]?.ToString() ?? "",
+                IsApproved = Convert.ToInt32(reader["IsApproved"]) == 1,
+                CreatedAt = Convert.ToDateTime(reader["CreatedAt"]),
+                AverageRating = reader.HasColumn("AverageRating") ? Convert.ToDouble(reader["AverageRating"]) : 0,
+                IsFavorite = reader.HasColumn("IsFavorite") && Convert.ToInt32(reader["IsFavorite"]) == 1,
+                IngredientsCount = reader.HasColumn("IngredientsCount") ? Convert.ToInt32(reader["IngredientsCount"]) : 0
+            };
+        }
+    }
+
+    public static class SqlDataReaderExtensions
+    {
+        public static bool HasColumn(this SqlDataReader reader, string columnName)
+        {
+            for (int i = 0; i < reader.FieldCount; i++)
+            {
+                if (reader.GetName(i).Equals(columnName, StringComparison.OrdinalIgnoreCase)) return true;
+            }
+            return false;
         }
     }
 }

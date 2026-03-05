@@ -1,27 +1,110 @@
 ﻿@page
 @model RecipeApp.Web.Pages.RegisterModel
+@{
+    ViewData["Title"] = "Criar Conta";
+}
 
-<h2>Registar utilizador</h2>
+<div class="row justify-content-center align-items-center min-vh-75 animate__animated animate__fadeIn">
+    <div class="col-md-5">
+        <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+            @* --- CABEÇALHO DO CARD --- *@
+            <div class="bg-success p-4 text-center text-white">
+                <i class="fas fa-user-plus fa-3x mb-3"></i>
+                <h2 class="fw-bold mb-0">Cria a tua conta</h2>
+                <p class="opacity-75 mb-0">Junta-te à nossa comunidade de chefs!</p>
+            </div>
 
-<form method="post">
+            <div class="card-body p-4 p-md-5">
+                <form method="post">
 
-    <div asp-validation-summary="All" style="color:red"></div>
+                    @* --- SUMÁRIO DE ERROS --- *@
+                    @if (!ViewData.ModelState.IsValid)
+                    {
+                        <div class="alert alert-danger border-0 rounded-4 shadow-sm mb-4">
+                            <ul class="mb-0 small">
+                                @foreach (var modelState in ViewData.ModelState.Values)
+                                {
+                                    foreach (var error in modelState.Errors)
+                                    {
+                                        <li><i class="fas fa-exclamation-circle me-2"></i>@error.ErrorMessage</li>
+                                    }
+                                }
+                            </ul>
+                        </div>
+                    }
 
-    <div>
-        <label>Nome</label><br />
-        <input asp-for="User.Name" />
+                    @* --- NOME --- *@
+                    <div class="form-floating mb-3">
+                        <input asp-for="User.Name" class="form-control border-0 bg-light rounded-pill px-4 shadow-none"
+                               placeholder="Nome Completo" required>
+                        <label class="ms-3 text-muted">Nome Completo</label>
+                    </div>
+
+                    @* --- EMAIL --- *@
+                    <div class="form-floating mb-3">
+                        <input asp-for="User.Email" type="email" class="form-control border-0 bg-light rounded-pill px-4 shadow-none"
+                               placeholder="nome@exemplo.com" required>
+                        <label class="ms-3 text-muted">Endereço de Email</label>
+                    </div>
+
+                    @* --- PASSWORD --- *@
+                    <div class="form-floating mb-3">
+                        <input asp-for="User.PasswordHash" type="password" class="form-control border-0 bg-light rounded-pill px-4 shadow-none"
+                               placeholder="Password" required>
+                        <label class="ms-3 text-muted">Password</label>
+                    </div>
+
+                    @* --- CONFIRMAR PASSWORD --- *@
+                    <div class="form-floating mb-4">
+                        <input asp-for="ConfirmPassword" type="password" class="form-control border-0 bg-light rounded-pill px-4 shadow-none"
+                               placeholder="Confirmar Password" required>
+                        <label class="ms-3 text-muted">Confirmar Password</label>
+                    </div>
+
+                    @* --- BOTÃO SUBMETER --- *@
+                    <button type="submit" class="btn btn-success w-100 rounded-pill py-3 fw-bold shadow-sm hover-lift mb-3">
+                        Criar Conta Gratis
+                    </button>
+
+                    <div class="text-center">
+                        <p class="text-muted small">
+                            Já tens conta?
+                            <a asp-page="/Login" class="text-success fw-bold text-decoration-none">Faz Login aqui</a>
+                        </p>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        @* --- DECORAÇÃO EXTRA --- *@
+        <div class="text-center mt-4">
+            <a asp-page="/Index" class="text-muted text-decoration-none small">
+                <i class="fas fa-arrow-left me-1"></i> Voltar para a página inicial
+            </a>
+        </div>
     </div>
+</div>
 
-    <div>
-        <label>Email</label><br />
-        <input asp-for="User.Email" type="email" />
-    </div>
+<style>
+    /* Estilo para focar nos inputs arredondados */
+    .form-control:focus {
+        background-color: #fff !important;
+        border: 1px solid #198754 !important;
+        box-shadow: 0 0 0 0.25rem rgba(25, 135, 84, 0.1) !important;
+    }
 
-    <div>
-        <label>Password</label><br />
-        <input asp-for="User.PasswordHash" type="password" />
-    </div>
+    /* Animação suave para o botão */
+    .hover-lift {
+        transition: all 0.2s ease;
+    }
 
-    <br />
-    <button type="submit">Registar</button>
-</form>
+        .hover-lift:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1) !important;
+        }
+
+    /* Ajuste para o Floating Label com bordas arredondadas */
+    .form-floating > label {
+        padding-left: 1.5rem;
+    }
+</style>

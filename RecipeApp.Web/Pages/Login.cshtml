@@ -4,10 +4,19 @@
     ViewData["Title"] = "Entrar";
 }
 
-<div class="container">
-    <div class="row justify-content-center align-items-center" style="min-height: 70vh;">
+<div class="container animate__animated animate__fadeIn">
+    <div class="row justify-content-center align-items-center" style="min-height: 75vh;">
         <div class="col-md-5">
-            <div class="card auth-card shadow-lg border-0">
+
+            @* --- MENSAGENS DE SUCESSO (Vindas de Logout ou Registo) --- *@
+            @if (TempData["SuccessMessage"] != null)
+            {
+                <div class="alert alert-success border-0 shadow-sm rounded-pill px-4 mb-4 animate__animated animate__shakeX">
+                    <i class="fas fa-check-circle me-2"></i> @TempData["SuccessMessage"]
+                </div>
+            }
+
+            <div class="card auth-card shadow-lg border-0 rounded-4 overflow-hidden">
                 <div class="card-body p-5">
 
                     <div class="text-center mb-4">
@@ -19,31 +28,32 @@
                     </div>
 
                     <form method="post">
+                        @* --- ERROS DE VALIDAÇÃO --- *@
                         @if (!ViewData.ModelState.IsValid)
                         {
-                            <div class="alert alert-danger border-0 shadow-sm small" role="alert">
+                            <div class="alert alert-danger border-0 shadow-sm small rounded-3" role="alert">
                                 <i class="fas fa-exclamation-circle me-2"></i>
                                 <div asp-validation-summary="All" class="d-inline"></div>
                             </div>
                         }
 
                         <div class="mb-3">
-                            <label asp-for="Email" class="form-label fw-semibold small text-uppercase">Email</label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-light border-end-0 text-muted">
+                            <label asp-for="Email" class="form-label fw-semibold small text-uppercase text-muted">Email</label>
+                            <div class="input-group shadow-sm rounded-pill overflow-hidden">
+                                <span class="input-group-text bg-light border-0 text-muted px-3">
                                     <i class="fas fa-envelope"></i>
                                 </span>
-                                <input asp-for="Email" class="form-control border-start-0 ps-0" placeholder="exemplo@email.com" required />
+                                <input asp-for="Email" class="form-control border-0 bg-light ps-0" placeholder="exemplo@email.com" required />
                             </div>
                         </div>
 
                         <div class="mb-4">
-                            <label asp-for="Password" class="form-label fw-semibold small text-uppercase">Password</label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-light border-end-0 text-muted">
+                            <label asp-for="Password" class="form-label fw-semibold small text-uppercase text-muted">Password</label>
+                            <div class="input-group shadow-sm rounded-pill overflow-hidden">
+                                <span class="input-group-text bg-light border-0 text-muted px-3">
                                     <i class="fas fa-lock"></i>
                                 </span>
-                                <input asp-for="Password" type="password" class="form-control border-start-0 ps-0" placeholder="••••••••" required />
+                                <input asp-for="Password" type="password" class="form-control border-0 bg-light ps-0" placeholder="••••••••" required />
                             </div>
                         </div>
 
@@ -56,6 +66,10 @@
                                 Não tem uma conta?
                                 <a asp-page="/Register" class="text-success fw-bold text-decoration-none">Registe-se aqui</a>
                             </p>
+                            <hr class="my-4 opacity-25">
+                            <a asp-page="/Index" class="text-muted text-decoration-none small">
+                                <i class="fas fa-arrow-left me-1"></i> Voltar ao Início
+                            </a>
                         </div>
                     </form>
 
@@ -66,13 +80,23 @@
 </div>
 
 <style>
-    /* Pequeno ajuste extra para animação no botão */
+    /* Estética de inputs arredondados sem bordas brutas */
+    .input-group-text, .form-control {
+        padding-top: 0.8rem;
+        padding-bottom: 0.8rem;
+    }
+
+        .form-control:focus {
+            background-color: #f8f9fa !important;
+            box-shadow: none !important;
+        }
+
     .transition-hover {
         transition: all 0.3s ease;
     }
 
         .transition-hover:hover {
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(39, 174, 96, 0.3) !important;
+            box-shadow: 0 8px 20px rgba(25, 135, 84, 0.25) !important;
         }
 </style>

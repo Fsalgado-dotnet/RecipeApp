@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using RecipeApp.Web.DAL;
 using RecipeApp.Web.Models;
 using RecipeApp.Web.Services;
 using System.Collections.Generic;
@@ -9,74 +8,60 @@ namespace RecipeApp.Web.Pages
 {
     public class IndexModel : PageModel
     {
-        private readonly RecipeDAL _recipeDAL;
-        private readonly RatingDAL _ratingDAL;
-        private readonly FavoriteDAL _favoriteDAL;
-        private readonly CategoryDAL _categoryDAL; 
-        private readonly DifficultyDAL _difficultyDAL; 
+        private readonly RecipeService _recipeService;
+        private readonly CategoryService _categoryService;
+        private readonly DifficultyService _difficultyService;
 
         public IndexModel(
-            RecipeDAL recipeDAL,
-            RatingDAL ratingDAL,
-            FavoriteDAL favoriteDAL,
-            CategoryDAL categoryDAL,
-            DifficultyDAL difficultyDAL)
+            RecipeService recipeService,
+            CategoryService categoryService,
+            DifficultyService difficultyService)
         {
-            _recipeDAL = recipeDAL;
-            _ratingDAL = ratingDAL;
-            _favoriteDAL = favoriteDAL;
-            _categoryDAL = categoryDAL;
-            _difficultyDAL = difficultyDAL;
+            _recipeService = recipeService;
+            _categoryService = categoryService;
+            _difficultyService = difficultyService;
         }
 
         public List<Recipe> Recipes { get; set; } = new();
-        public List<Category> Categories { get; set; } = new(); // 🔹 Para o filtro
-        public List<Difficulty> Difficulties { get; set; } = new(); // 🔹 Para o filtro
+        public List<Category> Categories { get; set; } = new();
+        public List<Difficulty> Difficulties { get; set; } = new();
 
-        // 🔹 OnGet atualizado para receber os novos filtros
-        public void OnGet(string searchTerm, long? categoryId, long? difficultyId)
+        // Guardar o filtro atual para manter a aba ativa no HTML
+        public string CurrentSort { get; set; }
+
+        public void OnGet(string? searchTerm, long? categoryId, long? difficultyId, string sort = "Todas")
         {
+            CurrentSort = sort;
             var user = SessionHelper.GetUser(HttpContext);
             long? userId = user?.UserId;
 
-            // 1️⃣ Carregar as listas para popular os Selects (Dropdowns) no HTML
-            Categories = _categoryDAL.GetAll();
-            Difficulties = _difficultyDAL.GetAll();
+            // 1. Carregar filtros das dropdowns
+            Categories = _categoryService.GetAllCategories() ?? new List<Category>();
+            Difficulties = _difficultyService.GetAll() ?? new List<Difficulty>();
 
-            // 2️⃣ Buscar receitas filtradas (Passando todos os parâmetros para o DAL)
-            Recipes = _recipeDAL.GetApprovedRecipes(userId, searchTerm, categoryId, difficultyId);
-
-            // 3️⃣ Manter a tua lógica original de Ratings e Favoritos
-            foreach (var recipe in Recipes)
-            {
-                // ⭐ Rating médio
-                recipe.AverageRating = _ratingDAL.GetAverageRating(recipe.RecipeId);
-
-                // ❤️ Favorito (se estiver logado)
-                if (user != null)
-                {
-                    recipe.IsFavorite = _favoriteDAL.IsFavorite(user.UserId, recipe.RecipeId);
-                }
-            }
+            // 2. Carregar receitas passando o parâmetro de ordenação (sort)
+            // Atualizei o método para aceitar o critério de ordenação das abas
+            Recipes = _recipeService.GetHomeRecipes(userId, searchTerm, categoryId, difficultyId, sort) ?? new List<Recipe>();
         }
 
-        // ============================================================
-        // 🔹 MÉTODO PARA ELIMINAR A RECEITA
-        // ============================================================
+        public IActionResult OnPostToggleFavorite(long id)
+        {
+            var user = SessionHelper.GetUser(HttpContext);
+            if (user == null) return RedirectToPage("/Login");
+
+            _recipeService.ToggleFavorite(user.UserId, id);
+            return RedirectToPage();
+        }
+
         public IActionResult OnPostDelete(long id)
         {
-            // 1️⃣ Verificar se o utilizador está logado
             var user = SessionHelper.GetUser(HttpContext);
-            if (user == null)
-            {
-                return RedirectToPage("/Login");
-            }
+            if (user == null) return RedirectToPage("/Login");
 
-            // 2️⃣ Chamar o DAL para fazer o "Soft Delete" (IsApproved = 0)
-            // Passando ID da receita e o ID do utilizador por segurança
-            _recipeDAL.DeleteRecipe(id, user.UserId);
+            bool isAdmin = SessionHelper.IsAdmin(HttpContext);
+            _recipeService.SoftDelete(id, user.UserId, isAdmin);
 
-            // 3️⃣ Recarregar a página para atualizar a lista
+            TempData["SuccessMessage"] = "Receita removida com sucesso!";
             return RedirectToPage();
         }
     }

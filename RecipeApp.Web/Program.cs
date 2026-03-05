@@ -4,14 +4,14 @@ using RecipeApp.Web.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 // ===============================
-// SERVICES
+// SERVICES (Configuração)
 // ===============================
 builder.Services.AddRazorPages();
 
 // DB helper
 builder.Services.AddScoped<DbHelper>();
 
-// DALs
+// DALs (Acesso Direto ao SQL)
 builder.Services.AddScoped<UserDAL>();
 builder.Services.AddScoped<RecipeDAL>();
 builder.Services.AddScoped<CategoryDAL>();
@@ -19,8 +19,19 @@ builder.Services.AddScoped<DifficultyDAL>();
 builder.Services.AddScoped<IngredientDAL>();
 builder.Services.AddScoped<RecipeIngredientDAL>();
 builder.Services.AddScoped<CommentDAL>();
-builder.Services.AddScoped<RatingDAL>();    
+builder.Services.AddScoped<RatingDAL>();
 builder.Services.AddScoped<FavoriteDAL>();
+
+// SERVICES (Lógica de Negócio) 
+builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<RecipeService>();
+builder.Services.AddScoped<CategoryService>();
+builder.Services.AddScoped<DifficultyService>();
+builder.Services.AddScoped<IngredientService>();
+builder.Services.AddScoped<RecipeIngredientService>();
+builder.Services.AddScoped<CommentService>();
+builder.Services.AddScoped<RatingService>();
+builder.Services.AddScoped<FavoriteService>();
 
 // Session
 builder.Services.AddSession(options =>
@@ -33,7 +44,7 @@ builder.Services.AddSession(options =>
 var app = builder.Build();
 
 // ===============================
-// MIDDLEWARE
+// MIDDLEWARE (Pipeline)
 // ===============================
 if (!app.Environment.IsDevelopment())
 {

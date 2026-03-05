@@ -2,7 +2,22 @@
 @model RecipeApp.Web.Pages.IndexModel
 @using RecipeApp.Web.Services
 @{
-    ViewData["Title"] = "Home";
+    ViewData["Title"] = "Início";
+}
+
+@* --- MENSAGENS DE FEEDBACK (TOAST) --- *@
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="position-fixed top-0 end-0 p-3" style="z-index: 1060">
+        <div class="toast show align-items-center text-white bg-success border-0 shadow-lg" role="alert">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="fas fa-check-circle me-2"></i> @TempData["SuccessMessage"]
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    </div>
 }
 
 @* --- SECÇÃO DE CABEÇALHO E FILTROS --- *@
@@ -11,17 +26,27 @@
         <h2 class="fw-bold"><i class="fas fa-utensils text-success me-2"></i>Receitas da Comunidade</h2>
         <p class="text-muted">Descobre pratos incríveis aprovados por quem mais percebe.</p>
     </div>
+
+    @* --- ABAS DE ORDENAÇÃO (CORRIGIDO) --- *@
     <div class="col-md-6 text-md-end">
         <div class="btn-group shadow-sm rounded-pill overflow-hidden">
-            <button class="btn btn-success">Todas</button>
-            <button class="btn btn-white border">Populares</button>
-            <button class="btn btn-white border">Novas</button>
+            <a asp-page="/Index" asp-route-sort="Todas"
+               class="btn @(Model.CurrentSort == "Todas" ? "btn-success" : "btn-white border")">Todas</a>
+
+            <a asp-page="/Index" asp-route-sort="Populares"
+               class="btn @(Model.CurrentSort == "Populares" ? "btn-success" : "btn-white border")">Populares</a>
+
+            <a asp-page="/Index" asp-route-sort="Novas"
+               class="btn @(Model.CurrentSort == "Novas" ? "btn-success" : "btn-white border")">Novas</a>
         </div>
     </div>
 
     @* BARRA DE PESQUISA E FILTROS *@
     <div class="col-12 mt-4">
         <form method="get" id="filterForm">
+            @* Importante: Manter o sort atual ao filtrar *@
+            <input type="hidden" name="sort" value="@Model.CurrentSort" />
+
             <div class="row g-2 p-2 bg-white shadow-sm rounded-pill-custom border align-items-center">
                 <div class="col-lg-4">
                     <div class="input-group border-0">
@@ -94,9 +119,7 @@ else
         {
             <div class="col-md-6 col-lg-4">
                 <div class="card h-100 border-0 shadow-sm recipe-card position-relative">
-
                     <div class="position-relative">
-                        @* --- IMAGEM CORRIGIDA (Garante comida e varia por ID) --- *@
                         <img src="https://loremflickr.com/500/350/food,cooking,recipe/all?lock=@recipe.RecipeId"
                              class="card-img-top" alt="@recipe.Title"
                              style="height: 220px; object-fit: cover; border-radius: 15px 15px 0 0;">
@@ -117,9 +140,11 @@ else
 
                             @if (SessionHelper.IsLoggedIn(HttpContext))
                             {
-                                <span class="bg-white p-2 rounded-circle shadow-sm @(recipe.IsFavorite ? "text-danger animate-pulse" : "text-muted opacity-75")">
-                                    <i class="@(recipe.IsFavorite ? "fas" : "far") fa-heart"></i>
-                                </span>
+                                <form method="post" asp-page-handler="ToggleFavorite" asp-route-id="@recipe.RecipeId">
+                                    <button type="submit" class="bg-white border-0 p-2 rounded-circle shadow-sm @(recipe.IsFavorite ? "text-danger animate-pulse" : "text-muted opacity-75")" title="Favorito">
+                                        <i class="@(recipe.IsFavorite ? "fas" : "far") fa-heart"></i>
+                                    </button>
+                                </form>
                             }
                         </div>
                     </div>
@@ -193,24 +218,12 @@ else
     }
 
     @@keyframes heartBeat {
-        0% {
+        0%, 28%, 70% {
             transform: scale(1);
         }
 
-        14% {
+        14%, 42% {
             transform: scale(1.1);
-        }
-
-        28% {
-            transform: scale(1);
-        }
-
-        42% {
-            transform: scale(1.1);
-        }
-
-        70% {
-            transform: scale(1);
         }
     }
 

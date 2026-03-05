@@ -1,31 +1,32 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using RecipeApp.Web.DAL;
 using RecipeApp.Web.Models;
 using RecipeApp.Web.Services;
+using System.Collections.Generic;
 
 namespace RecipeApp.Web.Pages
 {
     public class MyFavoritesModel : PageModel
     {
-        private readonly FavoriteDAL _favoriteDAL;
+        private readonly FavoriteService _favoriteService;
 
-        public MyFavoritesModel(FavoriteDAL favoriteDAL)
+        public MyFavoritesModel(FavoriteService favoriteService)
         {
-            _favoriteDAL = favoriteDAL;
+            _favoriteService = favoriteService;
         }
 
         public List<Recipe> Recipes { get; set; } = new();
 
         public IActionResult OnGet()
         {
+            // 1. Verificação de Segurança
             if (!SessionHelper.IsLoggedIn(HttpContext))
                 return RedirectToPage("/Login");
 
             var user = SessionHelper.GetUser(HttpContext);
 
-            // Busca a lista de receitas favoritas do utilizador logado
-            Recipes = _favoriteDAL.GetUserFavorites(user.UserId);
+            // 2. O Serviço agora gere a junção entre a tabela de favoritos e a de receitas
+            Recipes = _favoriteService.GetUserFavoriteRecipes(user.UserId);
 
             return Page();
         }
@@ -37,8 +38,10 @@ namespace RecipeApp.Web.Pages
 
             var user = SessionHelper.GetUser(HttpContext);
 
-          
-            _favoriteDAL.Remove(user.UserId, id);
+            // 3. Remoção via Serviço
+            _favoriteService.RemoveFavorite(user.UserId, id);
+
+            TempData["SuccessMessage"] = "Receita removida dos teus favoritos.";
 
             return RedirectToPage();
         }

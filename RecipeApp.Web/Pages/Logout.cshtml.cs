@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using RecipeApp.Web.Services;
 
 namespace RecipeApp.Web.Pages
 {
@@ -7,7 +8,13 @@ namespace RecipeApp.Web.Pages
     {
         public IActionResult OnGet()
         {
-            HttpContext.Session.Clear();
+            // 1. Usar o Helper para garantir que a sessão é limpa corretamente
+            SessionHelper.Logout(HttpContext);
+
+            // 2. Feedback visual para o utilizador saber que saiu com sucesso
+            TempData["SuccessMessage"] = "Sessão terminada. Até à próxima!";
+
+            // 3. Redirecionar para o Login ou Index
             return RedirectToPage("/Login");
         }
     }

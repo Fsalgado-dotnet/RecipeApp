@@ -1,18 +1,16 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using RecipeApp.Web.DAL;
 using RecipeApp.Web.Services;
-using System.Text.Json;
 
 namespace RecipeApp.Web.Pages
 {
     public class LoginModel : PageModel
     {
-        private readonly UserDAL _userDAL;
+        private readonly UserService _userService;
 
-        public LoginModel(UserDAL userDAL)
+        public LoginModel(UserService userService)
         {
-            _userDAL = userDAL;
+            _userService = userService;
         }
 
         [BindProperty]
@@ -21,35 +19,43 @@ namespace RecipeApp.Web.Pages
         [BindProperty]
         public string Password { get; set; }
 
+        public void OnGet()
+        {
+            // Apenas renderiza a página de login
+        }
+
         public IActionResult OnPost()
         {
-            var user = _userDAL.GetByEmail(Email);
-
-            if (user == null)
+            // 1. Validação básica de campos vazios
+            if (string.IsNullOrEmpty(Email) || string.IsNullOrEmpty(Password))
             {
-                ModelState.AddModelError("", "Email ou password inválidos.");
+                ModelState.AddModelError("", "Por favor, preencha todos os campos.");
                 return Page();
             }
 
-            if (!PasswordHelper.VerifyPassword(Password, user.PasswordHash))
+            // 2. Autenticação via Serviço
+            // O serviço trata de: procurar user, verificar hash e checar se está bloqueado
+            var user = _userService.Authenticate(Email, Password);
+
+            if (user == null)
             {
+                // Mensagem genérica para não dar pistas a hackers
                 ModelState.AddModelError("", "Email ou password inválidos.");
                 return Page();
             }
 
             if (user.IsLocked)
             {
-                ModelState.AddModelError("", "Conta bloqueada.");
+                ModelState.AddModelError("", "Esta conta encontra-se bloqueada. Contacte o administrador.");
                 return Page();
             }
 
-            HttpContext.Session.SetString(
-                "User",
-                JsonSerializer.Serialize(user)
-            );
+            // 3. Gravar na Sessão usando o nosso Helper (abstrai o JsonSerializer)
+            SessionHelper.SetUser(HttpContext, user);
 
+            // 4. Feedback e Redirecionamento
+            TempData["SuccessMessage"] = $"Bem-vindo de volta, {user.Name}!";
             return RedirectToPage("/Index");
         }
     }
 }
-

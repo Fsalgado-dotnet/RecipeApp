@@ -1,25 +1,25 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using RecipeApp.Web.DAL;
 using RecipeApp.Web.Models;
 using RecipeApp.Web.Services;
-using System;
 
 namespace RecipeApp.Web.Pages
 {
     public class RegisterModel : PageModel
     {
-        private readonly UserDAL _userDAL;
+        private readonly UserService _userService;
 
-        public RegisterModel(UserDAL userDAL)
+        public RegisterModel(UserService userService)
         {
-            _userDAL = userDAL;
+            _userService = userService;
         }
 
         [BindProperty]
-        // O 'new' resolve o conflito com PageModel.User (CS0108)
-        // O '= new();' resolve o aviso de inicialização (CS8618)
         public new User User { get; set; } = new();
+
+        // Propriedade extra para confirmação de password (boa prática de UX)
+        [BindProperty]
+        public string ConfirmPassword { get; set; }= string.Empty;
 
         public void OnGet()
         {
@@ -27,41 +27,39 @@ namespace RecipeApp.Web.Pages
 
         public IActionResult OnPost()
         {
-            // Validar se o formulário foi preenchido corretamente segundo o Modelo
+            // 1. Validação básica do ModelState
             if (!ModelState.IsValid)
             {
                 return Page();
             }
 
-            // 1. Verificar email duplicado (usando o email que veio do formulário)
-            if (_userDAL.EmailExists(User.Email))
+            // 2. Verificação de passwords iguais
+            if (User.PasswordHash != ConfirmPassword)
             {
-                ModelState.AddModelError("User.Email", "Já existe um utilizador com este email.");
+                ModelState.AddModelError("ConfirmPassword", "As passwords não coincidem.");
                 return Page();
             }
 
+            // 3. Tentar registar via Serviço
             try
             {
-                // 2. Preparar dados
-                // Assumindo que o campo da password no formulário mapeia para PasswordHash temporariamente
-                User.PasswordHash = PasswordHelper.HashPassword(User.PasswordHash);
-                User.IsAdmin = false;
-                User.IsLocked = false;
-                User.CreatedAt = DateTime.Now;
+                // O serviço agora trata do Hash, CreatedAt e IsAdmin automaticamente
+                _userService.Register(User.Name, User.Email, User.PasswordHash);
 
-                // 3. Guardar na Base de Dados
-                _userDAL.CreateUser(User);
-
-                // 4. Redirecionar para o Login com sucesso
+                TempData["SuccessMessage"] = "Conta criada com sucesso! Já podes fazer login.";
                 return RedirectToPage("/Login");
+            }
+            catch (ArgumentException ex)
+            {
+                // Erros de negócio (ex: email já existe)
+                ModelState.AddModelError("User.Email", ex.Message);
+                return Page();
             }
             catch (Exception ex)
             {
-                // Grava o erro detalhado no Output do Visual Studio para tu veres enquanto programas
-                System.Diagnostics.Debug.WriteLine($"Erro Crítico no Registo: {ex.Message}");
-                System.Diagnostics.Debug.WriteLine($"StackTrace: {ex.StackTrace}");
-
-                ModelState.AddModelError("", "Ocorreu um erro ao registar o utilizador. Tente novamente.");
+                // Erros técnicos inesperados
+                System.Diagnostics.Debug.WriteLine($"Erro no Registo: {ex.Message}");
+                ModelState.AddModelError("", "Ocorreu um erro inesperado. Tente mais tarde.");
                 return Page();
             }
         }

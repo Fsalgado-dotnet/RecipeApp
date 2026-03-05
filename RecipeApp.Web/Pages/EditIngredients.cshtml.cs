@@ -1,97 +1,68 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using RecipeApp.Web.DAL;
 using RecipeApp.Web.Models;
 using RecipeApp.Web.Services;
+using System.Collections.Generic;
 
 namespace RecipeApp.Web.Pages
 {
     public class EditIngredientsModel : PageModel
     {
-        private readonly RecipeDAL _recipeDAL;
-        private readonly IngredientDAL _ingredientDAL;
-        private readonly RecipeIngredientDAL _recipeIngredientDAL;
+        private readonly RecipeService _recipeService;
+        private readonly IngredientService _ingredientService;
 
-        public EditIngredientsModel(
-            RecipeDAL recipeDAL,
-            IngredientDAL ingredientDAL,
-            RecipeIngredientDAL recipeIngredientDAL)
+        public EditIngredientsModel(RecipeService recipeService, IngredientService ingredientService)
         {
-            _recipeDAL = recipeDAL;
-            _ingredientDAL = ingredientDAL;
-            _recipeIngredientDAL = recipeIngredientDAL;
+            _recipeService = recipeService;
+            _ingredientService = ingredientService;
         }
 
-        public Recipe Recipe { get; set; }
-        public List<RecipeIngredient> Ingredients { get; set; } = new();
+        public Recipe Recipe { get; set; } = new();
+        public List<Ingredient> Ingredients { get; set; } = new();
         public List<Ingredient> AllIngredients { get; set; } = new();
 
         [BindProperty]
-        public long IngredientId { get; set; }
+        public long SelectedIngredientId { get; set; }
 
         [BindProperty]
-        public double Quantity { get; set; }
+        public string Quantity { get; set; }
 
         [BindProperty]
         public string Unit { get; set; }
 
-        // ===============================
-        // GET
-        // ===============================
-        public IActionResult OnGet(long recipeId)
+        public void OnGet(long recipeId)
         {
-            if (!SessionHelper.IsLoggedIn(HttpContext))
-                return RedirectToPage("/Login");
-
-            Recipe = _recipeDAL.GetRecipeById(recipeId);
-            if (Recipe == null)
-                return RedirectToPage("/Index");
-
-            var user = SessionHelper.GetUser(HttpContext);
-
-            if (!SessionHelper.IsAdmin(HttpContext) &&
-                Recipe.CreatedByUserId != user.UserId)
-            {
-                return RedirectToPage("/Index");
-            }
-
-            Ingredients = _recipeIngredientDAL.GetByRecipe(recipeId);
-            AllIngredients = _ingredientDAL.GetAll();
-
-            return Page();
+            LoadData(recipeId);
         }
 
-        // ===============================
-        // ADD INGREDIENT
-        // ===============================
         public IActionResult OnPostAdd(long recipeId)
         {
-            if (!SessionHelper.IsLoggedIn(HttpContext))
-                return RedirectToPage("/Login");
-
-            _recipeIngredientDAL.Add(new RecipeIngredient
+            if (SelectedIngredientId > 0 && !string.IsNullOrEmpty(Quantity))
             {
-                RecipeId = recipeId,
-                IngredientId = IngredientId,
-                Quantity = Quantity,
-                Unit = Unit
-            });
-
+                string fullQuantity = $"{Quantity} {Unit}".Trim();
+                _recipeService.AddIngredientToRecipe(recipeId, SelectedIngredientId, fullQuantity);
+                TempData["SuccessMessage"] = "Ingrediente adicionado!";
+            }
             return RedirectToPage(new { recipeId });
         }
 
-        // ===============================
-        // REMOVE INGREDIENT
-        // ===============================
         public IActionResult OnPostRemove(long recipeId, long ingredientId)
         {
-            if (!SessionHelper.IsLoggedIn(HttpContext))
-                return RedirectToPage("/Login");
-
-            _recipeIngredientDAL.Remove(recipeId, ingredientId);
-
+            _recipeService.RemoveIngredientFromRecipe(recipeId, ingredientId);
+            TempData["SuccessMessage"] = "Ingrediente removido!";
             return RedirectToPage(new { recipeId });
+        }
+
+        private void LoadData(long recipeId)
+        {
+            
+            Recipe = _recipeService.GetById(recipeId);
+
+          
+            Ingredients = _recipeService.GetRecipeIngredients(recipeId);
+
+
+            AllIngredients = _ingredientService.GetAllIngredients();
         }
     }
 }
-

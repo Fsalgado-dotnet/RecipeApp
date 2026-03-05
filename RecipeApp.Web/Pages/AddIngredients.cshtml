@@ -1,55 +1,117 @@
 ﻿@page "{recipeId:long}"
 @model RecipeApp.Web.Pages.AddIngredientsModel
-
-<h2>🥕 Add Ingredients</h2>
-
-<form method="post">
-    <input type="hidden" name="recipeId" value="@Model.RecipeId" />
-
-    <div class="mb-3">
-        <label>Ingredient</label>
-        <select asp-for="IngredientId" class="form-select" required>
-            <option value="">-- Select ingredient --</option>
-            @foreach (var i in Model.Ingredients)
-            {
-                <option value="@i.IngredientId">@i.Name</option>
-            }
-        </select>
-    </div>
-
-    <div class="mb-3">
-        <label>Quantity</label>
-        <input asp-for="Quantity" class="form-control" required />
-    </div>
-
-    <div class="mb-3">
-        <label>Unit</label>
-        <input asp-for="Unit" class="form-control" placeholder="g, ml, cups..." />
-    </div>
-
-    <button class="btn btn-success">➕ Add ingredient</button>
-</form>
-
-<hr />
-
-<h4>Ingredients already added</h4>
-
-@if (Model.RecipeIngredients.Count == 0)
-{
-    <p>No ingredients yet.</p>
+@{
+    ViewData["Title"] = "Adicionar Ingredientes";
 }
-else
-{
-    <ul>
-        @foreach (var ri in Model.RecipeIngredients)
-        {
-            <li>
-                @ri.Quantity @ri.Unit - <strong>@ri.IngredientName</strong>
-            </li>
+
+<div class="container py-5 animate__animated animate__fadeIn">
+    @* --- BARRA DE PROGRESSO --- *@
+    <div class="row justify-content-center mb-5">
+        <div class="col-lg-8">
+            <div class="d-flex justify-content-between mb-2">
+                <span class="small fw-bold text-success">Passo 2: Ingredientes</span>
+                <span class="small text-muted">A preparar a lista...</span>
+            </div>
+            <div class="progress" style="height: 8px;">
+                <div class="progress-bar bg-success progress-bar-striped progress-bar-animated" style="width: 100%"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row justify-content-center g-4">
+        @* --- FORMULÁRIO DE ADIÇÃO --- *@
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+                <div class="card-body p-4 p-md-5">
+                    <h3 class="fw-bold mb-4 text-dark">
+                        <i class="fas fa-mortar-pestle text-success me-2"></i>O que leva a receita?
+                    </h3>
+
+                    <form method="post">
+                        <input type="hidden" asp-for="RecipeId" />
+
+                        <div class="mb-3">
+                            <label asp-for="SelectedIngredientId" class="form-label fw-bold small text-uppercase text-muted">Ingrediente</label>
+                            <select asp-for="SelectedIngredientId" class="form-select border-0 bg-light rounded-3" required>
+                                <option value="">-- Selecionar --</option>
+                                @foreach (var i in Model.AllIngredients)
+                                {
+                                    <option value="@i.IngredientId">@i.Name</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="row g-2 mb-4">
+                            <div class="col-6">
+                                <label asp-for="Quantity" class="form-label fw-bold small text-uppercase text-muted">Quantidade</label>
+                                <input asp-for="Quantity" type="text" class="form-control border-0 bg-light rounded-3" placeholder="Ex: 500" required />
+                            </div>
+                            <div class="col-6">
+                                <label asp-for="Unit" class="form-label fw-bold small text-uppercase text-muted">Unidade</label>
+                                <input asp-for="Unit" class="form-control border-0 bg-light rounded-3" placeholder="g, ml, dose..." required />
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-success btn-lg w-100 rounded-pill fw-bold shadow-sm transition-hover">
+                            <i class="fas fa-plus me-2"></i>Adicionar à Lista
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        @* --- LISTA EM TEMPO REAL --- *@
+        <div class="col-lg-5">
+            <div class="card border-0 bg-white shadow-sm rounded-4 p-4">
+                <h5 class="fw-bold mb-4 border-bottom pb-2">Ingredientes na receita:</h5>
+
+                @if (Model.CurrentRecipeIngredients == null || Model.CurrentRecipeIngredients.Count == 0)
+                {
+                    <div class="text-center py-5 opacity-50">
+                        <i class="fas fa-shopping-basket fa-3x mb-3"></i>
+                        <p>Ainda não adicionou ingredientes.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="list-group list-group-flush mb-4">
+                        @foreach (var ri in Model.CurrentRecipeIngredients)
+                        {
+                            <div class="list-group-item d-flex justify-content-between align-items-center bg-transparent px-0 animate__animated animate__fadeInLeft">
+                                <div>
+                                    @* Aqui usamos a propriedade Quantity que já vem formatada do DAL *@
+                                    <span class="badge bg-success-light text-success rounded-pill me-2">@ri.Quantity</span>
+                                    <span class="fw-semibold">@ri.Name</span>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+
+                <div class="mt-auto border-top pt-4">
+                    <a asp-page="/Index" class="btn btn-dark btn-lg w-100 rounded-pill fw-bold shadow-sm">
+                        <i class="fas fa-check-circle me-2"></i>Finalizar Receita
+                    </a>
+                    <p class="text-center text-muted small mt-3 mb-0">
+                        A sua receita será revista por um administrador antes de ficar pública.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .bg-success-light {
+        background-color: rgba(39, 174, 96, 0.1);
+    }
+
+    .transition-hover {
+        transition: all 0.3s ease;
+    }
+
+        .transition-hover:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 15px rgba(39, 174, 96, 0.2) !important;
         }
-    </ul>
-}
-
-<a asp-page="/Index" class="btn btn-secondary mt-3">
-    Finish recipe
-</a>
+</style>

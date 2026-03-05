@@ -4,25 +4,34 @@
     ViewData["Title"] = "As Minhas Receitas";
 }
 
-<div class="container py-4">
+<div class="container py-4 animate__animated animate__fadeIn">
+    @* --- FEEDBACK DE AÇÕES (Ex: Receita eliminada) --- *@
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show rounded-pill px-4 shadow-sm mb-4" role="alert">
+            <i class="fas fa-check-circle me-2"></i> @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
     <div class="d-flex justify-content-between align-items-center mb-5 flex-wrap gap-3">
         <div>
             <h2 class="fw-bold mb-1"><i class="fas fa-book-open text-success me-2"></i>As Minhas Receitas</h2>
             <p class="text-muted mb-0">Faça a gestão e acompanhe o estado das suas publicações.</p>
         </div>
-        <a asp-page="/CreateRecipe" class="btn btn-success rounded-pill px-4 py-2 shadow-sm">
+        <a asp-page="/CreateRecipe" class="btn btn-success rounded-pill px-4 py-2 shadow-sm fw-bold">
             <i class="fas fa-plus me-2"></i>Criar Nova Receita
         </a>
     </div>
 
-    @if (Model.Recipes == null || Model.Recipes.Count == 0)
+    @if (Model.Recipes == null || !Model.Recipes.Any())
     {
-        <div class="card border-0 shadow-sm rounded-4 text-center py-5">
+        <div class="card border-0 shadow-sm rounded-4 text-center py-5 border-2 border-dashed">
             <div class="card-body">
                 <div class="display-1 text-muted opacity-25 mb-3">🍳</div>
-                <h4 class="text-secondary">Ainda não partilhou o seu talento!</h4>
+                <h4 class="text-secondary fw-bold">Ainda não partilhou o seu talento!</h4>
                 <p class="text-muted mb-4">Crie a sua primeira receita e partilhe-a com o mundo.</p>
-                <a asp-page="/CreateRecipe" class="btn btn-outline-success rounded-pill px-5">
+                <a asp-page="/CreateRecipe" class="btn btn-outline-success rounded-pill px-5 fw-bold">
                     Começar Agora
                 </a>
             </div>
@@ -30,7 +39,7 @@
     }
     else
     {
-        <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+        <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white">
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
                     <thead class="bg-light">
@@ -46,25 +55,26 @@
                             <tr>
                                 <td class="ps-4 py-4">
                                     <div class="d-flex align-items-center">
-                                        <div class="bg-light rounded-3 p-2 me-3 text-success">
+                                        <div class="bg-light rounded-3 p-2 me-3 text-success shadow-sm">
                                             <i class="fas fa-mortar-pestle fs-4"></i>
                                         </div>
                                         <div>
                                             <div class="fw-bold text-dark fs-5">@recipe.Title</div>
-                                            <small class="text-muted">Criada em @DateTime.Now.ToShortDateString()</small>
+                                            @* Ajustei para usar a data real da receita se existir *@
+                                            <small class="text-muted">Criada em @recipe.CreatedAt.ToString("dd/MM/yyyy")</small>
                                         </div>
                                     </div>
                                 </td>
                                 <td>
                                     @if (recipe.IsApproved)
                                     {
-                                        <span class="badge rounded-pill bg-success-light text-success px-3">
+                                        <span class="badge rounded-pill bg-success-light text-success px-3 py-2">
                                             <i class="fas fa-check-circle me-1"></i> Aprovada
                                         </span>
                                     }
                                     else
                                     {
-                                        <span class="badge rounded-pill bg-warning-light text-warning px-3">
+                                        <span class="badge rounded-pill bg-warning-light text-warning px-3 py-2">
                                             <i class="fas fa-clock me-1"></i> Pendente
                                         </span>
                                     }
@@ -83,6 +93,13 @@
                                            class="btn btn-white border-0 text-secondary px-3 border-start" title="Gerir Ingredientes">
                                             <i class="fas fa-carrot"></i>
                                         </a>
+                                        @* Adicionei um botão de eliminar com confirmação simples *@
+                                        <form method="post" asp-page-handler="Delete" asp-route-id="@recipe.RecipeId"
+                                              style="display:inline;" onsubmit="return confirm('Tem a certeza que deseja eliminar esta receita?');">
+                                            <button type="submit" class="btn btn-white border-0 text-danger px-3 border-start" title="Eliminar">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </form>
                                     </div>
                                 </td>
                             </tr>
@@ -95,29 +112,29 @@
 </div>
 
 <style>
-    /* Estilos extras para o Dashboard */
+    /* Estilos extras mantidos e refinados */
     .bg-success-light {
-        background-color: rgba(39, 174, 96, 0.1);
+        background-color: rgba(25, 135, 84, 0.1);
     }
 
     .bg-warning-light {
-        background-color: rgba(241, 196, 15, 0.1);
+        background-color: rgba(255, 193, 7, 0.1);
     }
 
     .table tbody tr {
-        transition: background-color 0.2s ease;
+        transition: all 0.2s ease;
     }
 
         .table tbody tr:hover {
-            background-color: rgba(0,0,0,0.01);
+            background-color: #fcfdfc;
+            transform: scale(1.001);
         }
 
     .btn-group .btn:hover {
         background-color: #f8f9fa;
-        color: #000 !important;
     }
 
-    /* Badge pulse effect for pending items */
+    /* Badge pulse effect refinado */
     .bg-warning-light i {
         animation: pulse 2s infinite;
     }

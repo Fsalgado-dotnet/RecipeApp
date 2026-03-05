@@ -1,6 +1,6 @@
 ﻿using Microsoft.Data.SqlClient;
 using RecipeApp.Web.Models;
-using Microsoft.Extensions.Configuration;
+using System.Collections.Generic;
 
 namespace RecipeApp.Web.DAL
 {
@@ -13,92 +13,56 @@ namespace RecipeApp.Web.DAL
             _db = db;
         }
 
-        // ✅ Adicionar aos favoritos
-        public void Add(long userId, long recipeId)
+        public List<Recipe> GetFavoritesByUserId(long userId)
         {
+            var recipes = new List<Recipe>();
             using var connection = _db.GetConnection();
-
-            // Usamos [Favourite] com 'u' e parênteses retos para evitar conflitos de nomes no SQL
-            string sql = @"
-                INSERT INTO [Favourite] (UserId, RecipeId, CreatedAt)
-                VALUES (@UserId, @RecipeId, GETDATE())
-            ";
+            // Fazemos um JOIN para trazer os dados da receita junto com o favorito
+            string sql = @"SELECT r.*, c.Name AS CategoryName, d.Name AS DifficultyName 
+                           FROM Recipe r
+                           INNER JOIN Favourite f ON r.RecipeId = f.RecipeId
+                           INNER JOIN Category c ON r.CategoryId = c.CategoryId
+                           INNER JOIN Difficulty d ON r.DifficultyId = d.DifficultyId
+                           WHERE f.UserId = @UserId";
 
             using var cmd = new SqlCommand(sql, connection);
             cmd.Parameters.AddWithValue("@UserId", userId);
-            cmd.Parameters.AddWithValue("@RecipeId", recipeId);
-
-            connection.Open();
-            cmd.ExecuteNonQuery();
-        }
-
-        // ❌ Remover dos favoritos
-        public void Remove(long userId, long recipeId)
-        {
-            using var connection = _db.GetConnection();
-
-            string sql = @"
-                DELETE FROM [Favourite]
-                WHERE UserId = @UserId AND RecipeId = @RecipeId
-            ";
-
-            using var cmd = new SqlCommand(sql, connection);
-            cmd.Parameters.AddWithValue("@UserId", userId);
-            cmd.Parameters.AddWithValue("@RecipeId", recipeId);
-
-            connection.Open();
-            cmd.ExecuteNonQuery();
-        }
-
-        // ⭐ Verificar se a receita já é favorita do utilizador
-        public bool IsFavorite(long userId, long recipeId)
-        {
-            using var connection = _db.GetConnection();
-
-            string sql = @"
-                SELECT COUNT(1)
-                FROM [Favourite]
-                WHERE UserId = @UserId AND RecipeId = @RecipeId
-            ";
-
-            using var cmd = new SqlCommand(sql, connection);
-            cmd.Parameters.AddWithValue("@UserId", userId);
-            cmd.Parameters.AddWithValue("@RecipeId", recipeId);
-
-            connection.Open();
-            // Retorna true se encontrar pelo menos 1 registo
-            return (int)cmd.ExecuteScalar() > 0;
-        }
-
-        // 📋 Listar todas as receitas favoritas de um utilizador específico
-        public List<Recipe> GetUserFavorites(long userId)
-        {
-            var list = new List<Recipe>();
-            using var connection = _db.GetConnection();
-
-            string sql = @"
-                SELECT r.RecipeId, r.Title
-                FROM [Favourite] f
-                INNER JOIN Recipe r ON f.RecipeId = r.RecipeId
-                WHERE f.UserId = @UserId
-            ";
-
-            using var cmd = new SqlCommand(sql, connection);
-            cmd.Parameters.AddWithValue("@UserId", userId);
-
             connection.Open();
             using var reader = cmd.ExecuteReader();
-
             while (reader.Read())
             {
-                list.Add(new Recipe
+                recipes.Add(new Recipe
                 {
                     RecipeId = (long)reader["RecipeId"],
-                    Title = reader["Title"].ToString()
+                    Title = reader["Title"].ToString() ?? "",
+                    CategoryName = reader["CategoryName"].ToString() ?? "",
+                    DifficultyName = reader["DifficultyName"].ToString() ?? "",
+                    IsFavorite = true // Se está nesta lista, é favorito
                 });
             }
+            return recipes;
+        }
 
-            return list;
+        public void DeleteFavorite(long userId, long recipeId)
+        {
+            using var connection = _db.GetConnection();
+            string sql = "DELETE FROM Favourite WHERE UserId = @Uid AND RecipeId = @Rid";
+            using var cmd = new SqlCommand(sql, connection);
+            cmd.Parameters.AddWithValue("@Uid", userId);
+            cmd.Parameters.AddWithValue("@Rid", recipeId);
+            connection.Open();
+            cmd.ExecuteNonQuery();
+        }
+
+        public void InsertFavorite(long userId, long recipeId)
+        {
+            using var connection = _db.GetConnection();
+            string sql = "INSERT INTO Favourite (UserId, RecipeId) VALUES (@Uid, @Rid)";
+            using var cmd = new SqlCommand(sql, connection);
+            cmd.Parameters.AddWithValue("@Uid", userId);
+            cmd.Parameters.AddWithValue("@Rid", recipeId);
+            connection.Open();
+            cmd.ExecuteNonQuery();
         }
     }
 }

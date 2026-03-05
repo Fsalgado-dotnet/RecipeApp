@@ -1,4 +1,5 @@
 ﻿using Microsoft.Data.SqlClient;
+using System;
 
 namespace RecipeApp.Web.DAL
 {
@@ -11,27 +12,22 @@ namespace RecipeApp.Web.DAL
             _db = db;
         }
 
-        // Inserir ou atualizar rating
         public void SaveRating(long recipeId, long userId, int value)
         {
             using var connection = _db.GetConnection();
 
+            // CORREÇÃO: Removida a coluna 'CreatedAt' que causava o erro SqlException
+            // A tua tabela Rating só tem: RatingId, RecipeId, UserId, Value
             string sql = @"
-                IF EXISTS (
-                    SELECT 1 FROM Rating
-                    WHERE RecipeId = @RecipeId AND UserId = @UserId
-                )
+                IF EXISTS (SELECT 1 FROM Rating WHERE RecipeId = @RecipeId AND UserId = @UserId)
                 BEGIN
-                    UPDATE Rating
-                    SET Value = @Value
-                    WHERE RecipeId = @RecipeId AND UserId = @UserId
+                    UPDATE Rating SET Value = @Value WHERE RecipeId = @RecipeId AND UserId = @UserId
                 END
                 ELSE
                 BEGIN
-                    INSERT INTO Rating (RecipeId, UserId, Value, CreatedAt)
-                    VALUES (@RecipeId, @UserId, @Value, GETDATE())
-                END
-            ";
+                    INSERT INTO Rating (RecipeId, UserId, Value)
+                    VALUES (@RecipeId, @UserId, @Value)
+                END";
 
             using var cmd = new SqlCommand(sql, connection);
             cmd.Parameters.AddWithValue("@RecipeId", recipeId);
@@ -39,27 +35,29 @@ namespace RecipeApp.Web.DAL
             cmd.Parameters.AddWithValue("@Value", value);
 
             connection.Open();
+            // Já não vai "rebentar" aqui
             cmd.ExecuteNonQuery();
         }
 
-        // Média da receita
         public double GetAverageRating(long recipeId)
         {
-            using var connection = _db.GetConnection();
+            try
+            {
+                using var connection = _db.GetConnection();
+                string sql = "SELECT AVG(CAST(Value AS FLOAT)) FROM Rating WHERE RecipeId = @RecipeId";
 
-            string sql = @"
-                SELECT AVG(CAST(Value AS FLOAT))
-                FROM Rating
-                WHERE RecipeId = @RecipeId
-            ";
+                using var cmd = new SqlCommand(sql, connection);
+                cmd.Parameters.AddWithValue("@RecipeId", recipeId);
 
-            using var cmd = new SqlCommand(sql, connection);
-            cmd.Parameters.AddWithValue("@RecipeId", recipeId);
+                connection.Open();
+                var result = cmd.ExecuteScalar();
 
-            connection.Open();
-            var result = cmd.ExecuteScalar();
-
-            return result == DBNull.Value ? 0 : (double)result;
+                return result == DBNull.Value ? 0 : Convert.ToDouble(result);
+            }
+            catch
+            {
+                return 0; // Proteção para a página não crashar se houver erro de leitura
+            }
         }
     }
 }

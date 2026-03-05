@@ -9,7 +9,7 @@
 
         public string Text { get; set; } = string.Empty;
 
-        public string UserName { get; set; } = string.Empty; // para mostrar no ecrã
+        public string UserName { get; set; } = string.Empty; 
 
         public DateTime CreatedAt { get; set; }
     }

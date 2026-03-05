@@ -5,6 +5,19 @@ namespace RecipeApp.Web.Services
 {
     public static class SessionHelper
     {
+        // 1. Gravar o utilizador na sessão (Resolve erro no Login.cshtml.cs)
+        public static void SetUser(HttpContext context, User user)
+        {
+            var data = JsonSerializer.Serialize(user);
+            context.Session.SetString("User", data);
+        }
+
+        // 2. Limpar a sessão (Resolve erro no Logout.cshtml.cs)
+        public static void Logout(HttpContext context)
+        {
+            context.Session.Clear();
+        }
+
         public static User? GetUser(HttpContext context)
         {
             var data = context.Session.GetString("User");

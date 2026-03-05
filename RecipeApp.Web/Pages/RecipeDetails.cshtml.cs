@@ -1,131 +1,102 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using RecipeApp.Web.DAL;
 using RecipeApp.Web.Models;
 using RecipeApp.Web.Services;
+using System.Collections.Generic;
 
 namespace RecipeApp.Web.Pages
 {
     public class RecipeDetailsModel : PageModel
     {
-        private readonly RecipeDAL _recipeDAL;
-        private readonly CommentDAL _commentDAL;
-        private readonly RatingDAL _ratingDAL;
-        private readonly FavoriteDAL _favoriteDAL;
-        private readonly RecipeIngredientDAL _recipeIngredientDAL;
+        private readonly RecipeService _recipeService;
+        private readonly CommentService _commentService;
+        private readonly RatingService _ratingService;
+        private readonly FavoriteService _favoriteService;
 
         public RecipeDetailsModel(
-            RecipeDAL recipeDAL,
-            CommentDAL commentDAL,
-            RatingDAL ratingDAL,
-            FavoriteDAL favoriteDAL,
-            RecipeIngredientDAL recipeIngredientDAL)
+            RecipeService recipeService,
+            CommentService commentService,
+            RatingService ratingService,
+            FavoriteService favoriteService)
         {
-            _recipeDAL = recipeDAL;
-            _commentDAL = commentDAL;
-            _ratingDAL = ratingDAL;
-            _favoriteDAL = favoriteDAL;
-            _recipeIngredientDAL = recipeIngredientDAL;
+            _recipeService = recipeService;
+            _commentService = commentService;
+            _ratingService = ratingService;
+            _favoriteService = favoriteService;
         }
 
-        // ===============================
-        // DATA
-        // ===============================
         public Recipe Recipe { get; set; }
         public List<Comment> Comments { get; set; } = new();
-        public List<RecipeIngredient> Ingredients { get; set; } = new();
-
-        // ⭐ Rating
+        public List<Ingredient> Ingredients { get; set; } = new(); // Mudado para Ingredient
         public double AverageRating { get; set; }
+        public bool IsFavorite { get; set; }
 
         [BindProperty]
         public int SelectedRating { get; set; }
 
-        // 💬 Comment
         [BindProperty]
         public string NewComment { get; set; }
 
-        // ⭐ Favorite
-        public bool IsFavorite { get; set; }
-
-        // ===============================
-        // GET
-        // ===============================
         public IActionResult OnGet(long id)
         {
-            Recipe = _recipeDAL.GetRecipeById(id);
+            // 1. Corrigido: GetById em vez de GetRecipeById
+            Recipe = _recipeService.GetById(id);
+
             if (Recipe == null)
                 return RedirectToPage("/Index");
 
-            Comments = _commentDAL.GetByRecipe(id);
-            Ingredients = _recipeIngredientDAL.GetByRecipe(id);
-            AverageRating = _ratingDAL.GetAverageRating(id);
+            Comments = _commentService.GetRecipeComments(id);
+
+            // 2. Corrigido: Usar o _recipeService diretamente para ingredientes
+            Ingredients = _recipeService.GetRecipeIngredients(id);
+
+            // 3. Corrigido: Usar a propriedade AverageRating da Recipe ou do RatingService
+            AverageRating = Recipe.AverageRating;
 
             var user = SessionHelper.GetUser(HttpContext);
             if (user != null)
             {
-                IsFavorite = _favoriteDAL.IsFavorite(user.UserId, id);
+                // Vamos adicionar este método ao FavoriteService abaixo
+                IsFavorite = _favoriteService.CheckIfFavorite(user.UserId, id);
             }
 
             return Page();
         }
 
-        // ===============================
-        // COMMENTS
-        // ===============================
         public IActionResult OnPostAddComment(long id)
         {
-            if (!SessionHelper.IsLoggedIn(HttpContext))
-                return RedirectToPage("/Login");
-
             var user = SessionHelper.GetUser(HttpContext);
+            if (user == null) return RedirectToPage("/Login");
 
-            _commentDAL.Create(new Comment
+            if (!string.IsNullOrWhiteSpace(NewComment))
             {
-                RecipeId = id,
-                UserId = user.UserId,
-                Text = NewComment,
-                CreatedAt = DateTime.Now
-            });
+                _commentService.AddComment(id, user.UserId, NewComment);
+                TempData["SuccessMessage"] = "Comentário adicionado!";
+            }
 
             return RedirectToPage(new { id });
         }
 
-        // ===============================
-        // RATING
-        // ===============================
         public IActionResult OnPostRate(long id)
         {
-            if (!SessionHelper.IsLoggedIn(HttpContext))
-                return RedirectToPage("/Login");
-
             var user = SessionHelper.GetUser(HttpContext);
-            _ratingDAL.SaveRating(id, user.UserId, SelectedRating);
+            if (user == null) return RedirectToPage("/Login");
+
+            _ratingService.SubmitRating(id, user.UserId, SelectedRating);
+            TempData["SuccessMessage"] = "Obrigado pela sua avaliação!";
 
             return RedirectToPage(new { id });
         }
 
-        // ===============================
-        // FAVORITES
-        // ===============================
-        public IActionResult OnPostAddFavorite(long id)
+        public IActionResult OnPostToggleFavorite(long id, bool isAdding)
         {
-            if (!SessionHelper.IsLoggedIn(HttpContext))
-                return RedirectToPage("/Login");
-
             var user = SessionHelper.GetUser(HttpContext);
-            _favoriteDAL.Add(user.UserId, id);
+            if (user == null) return RedirectToPage("/Login");
 
-            return RedirectToPage(new { id });
-        }
-
-        public IActionResult OnPostRemoveFavorite(long id)
-        {
-            if (!SessionHelper.IsLoggedIn(HttpContext))
-                return RedirectToPage("/Login");
-
-            var user = SessionHelper.GetUser(HttpContext);
-            _favoriteDAL.Remove(user.UserId, id);
+            if (isAdding)
+                _favoriteService.AddFavorite(user.UserId, id);
+            else
+                _favoriteService.RemoveFavorite(user.UserId, id);
 
             return RedirectToPage(new { id });
         }

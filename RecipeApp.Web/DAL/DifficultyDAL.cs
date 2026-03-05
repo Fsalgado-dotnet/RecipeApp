@@ -1,5 +1,6 @@
 ﻿using Microsoft.Data.SqlClient;
 using RecipeApp.Web.Models;
+using System.Collections.Generic;
 
 namespace RecipeApp.Web.DAL
 {
@@ -12,31 +13,31 @@ namespace RecipeApp.Web.DAL
             _db = db;
         }
 
-        // 📋 Listar todas as dificuldades
         public List<Difficulty> GetAll()
         {
             var list = new List<Difficulty>();
 
-            using var connection = _db.GetConnection();
-
-            string sql = @"
-                SELECT DifficultyId, Name
-                FROM Difficulty
-                ORDER BY DifficultyId
-            ";
-
-            using var cmd = new SqlCommand(sql, connection);
-
-            connection.Open();
-            using var reader = cmd.ExecuteReader();
-
-            while (reader.Read())
+            try
             {
-                list.Add(new Difficulty
+                using var connection = _db.GetConnection();
+                string sql = "SELECT DifficultyId, Name FROM Difficulty ORDER BY DifficultyId";
+
+                using var cmd = new SqlCommand(sql, connection);
+                connection.Open();
+                using var reader = cmd.ExecuteReader();
+
+                while (reader.Read())
                 {
-                    DifficultyId = (long)reader["DifficultyId"],
-                    Name = reader["Name"].ToString()
-                });
+                    list.Add(new Difficulty
+                    {
+                        DifficultyId = (long)reader["DifficultyId"],
+                        Name = reader["Name"]?.ToString() ?? "N/A"
+                    });
+                }
+            }
+            catch
+            {
+                //  Retorna lista vazia se a BD falhar
             }
 
             return list;
