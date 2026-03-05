@@ -1,5 +1,6 @@
-using RecipeApp.Web.DAL;
-using RecipeApp.Web.Services;
+using RecipeApp.DAL;
+using RecipeApp.Services;
+using RecipeApp.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 

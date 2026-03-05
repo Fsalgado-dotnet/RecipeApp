@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using RecipeApp.Web.Models;
-using RecipeApp.Web.Services;
+using RecipeApp.Models;
+using RecipeApp.Services;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -32,6 +32,7 @@ namespace RecipeApp.Web.Pages
 
         public IActionResult OnGet()
         {
+            // Verifica se o utilizador está logado usando o Helper que movemos para os Services
             if (!SessionHelper.IsLoggedIn(HttpContext))
                 return RedirectToPage("/Login");
 
@@ -44,18 +45,27 @@ namespace RecipeApp.Web.Pages
             var user = SessionHelper.GetUser(HttpContext);
             if (user == null) return RedirectToPage("/Login");
 
-            
-            _recipeService.CreateRecipe(Recipe, user.UserId);
+            // Validação simples para garantir que temos dados mínimos
+            if (!ModelState.IsValid)
+            {
+                LoadDropdowns();
+                return Page();
+            }
 
-            TempData["SuccessMessage"] = "Receita enviada com sucesso! Aguarde a aprovação.";
+            // 1. Criamos a receita e guardamos o ID gerado pelo banco de dados
+            // Nota: O teu RecipeService.CreateRecipe deve retornar int (o ID da receita)
+            int newRecipeId = _recipeService.CreateRecipe(Recipe, user.UserId);
 
-            // Redirecionamos para o Index ou para as receitas
-            return RedirectToPage("/Index");
+            // 2. Mensagem de feedback para o utilizador
+            TempData["SuccessMessage"] = "Informações básicas gravadas! Adicione agora os ingredientes.";
+
+            // 3. Redirecionamos para a página de ingredientes, passando o ID da nova receita
+            // Isso resolve o problema de saltar a etapa dos ingredientes
+            return RedirectToPage("AddIngredients", new { recipeId = newRecipeId });
         }
 
         private void LoadDropdowns()
         {
-          
             var categories = _categoryService.GetAllCategories();
             CategoryOptions = categories
                 .Select(c => new SelectListItem { Value = c.CategoryId.ToString(), Text = c.Name })

@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using RecipeApp.Web.Models;
-using RecipeApp.Web.Services;
+using RecipeApp.Models;
+using RecipeApp.Services;
 
 namespace RecipeApp.Web.Pages
 {

@@ -25,36 +25,42 @@
     }
 
     <div class="row g-4">
-        @* --- COLUNA DA ESQUERDA: ADICIONAR NOVO --- *@
+        @* --- COLUNA DA ESQUERDA: ADIÇÃO --- *@
         <div class="col-lg-4">
             <div class="card border-0 shadow-sm rounded-4 sticky-top" style="top: 20px;">
                 <div class="card-body p-4">
                     <h5 class="fw-bold mb-3"><i class="fas fa-plus-circle text-success me-2"></i>Adicionar Novo</h5>
 
                     <form method="post" asp-page-handler="Add">
-                        @* Passamos o ID da receita corretamente *@
+                        @* Passamos o ID da receita *@
                         <input type="hidden" name="recipeId" value="@Model.Recipe.RecipeId" />
 
                         <div class="mb-3">
-                            <label asp-for="SelectedIngredientId" class="form-label small fw-bold">Ingrediente</label>
-                            <select class="form-select shadow-sm" asp-for="SelectedIngredientId" required>
-                                <option value="">Selecione o ingrediente...</option>
+                            <label asp-for="IngredientName" class="form-label small fw-bold">Ingrediente</label>
+                            @* ALTERAÇÃO: Input com datalist para resolver o erro CS1061 *@
+                            <input asp-for="IngredientName"
+                                   list="ingredientsList"
+                                   class="form-control shadow-sm border-0 bg-light"
+                                   placeholder="Procure ou escreva..."
+                                   autocomplete="off"
+                                   required />
+
+                            <datalist id="ingredientsList">
                                 @foreach (var i in Model.AllIngredients)
                                 {
-                                    <option value="@i.IngredientId">@i.Name</option>
+                                    <option value="@i.Name"></option>
                                 }
-                            </select>
+                            </datalist>
                         </div>
 
                         <div class="row g-2 mb-3">
                             <div class="col-6">
                                 <label asp-for="Quantity" class="form-label small fw-bold">Qtd.</label>
-                                @* Mudado para type="text" para aceitar decimais de forma mais flexível no modelo string *@
-                                <input class="form-control shadow-sm" asp-for="Quantity" placeholder="Ex: 500" required />
+                                <input class="form-control shadow-sm border-0 bg-light" asp-for="Quantity" placeholder="Ex: 500" required />
                             </div>
                             <div class="col-6">
                                 <label asp-for="Unit" class="form-label small fw-bold">Unidade</label>
-                                <input class="form-control shadow-sm" asp-for="Unit" placeholder="Ex: g, ml, dose" required />
+                                <input class="form-control shadow-sm border-0 bg-light" asp-for="Unit" placeholder="Ex: g, ml" required />
                             </div>
                         </div>
 
@@ -76,7 +82,7 @@
                     {
                         <div class="text-center py-5">
                             <i class="fas fa-mortar-pestle text-muted opacity-25 display-1 mb-3"></i>
-                            <p class="text-muted">Ainda não foram adicionados ingredientes a esta receita.</p>
+                            <p class="text-muted">Ainda não foram adicionados ingredientes.</p>
                         </div>
                     }
                     else
@@ -95,10 +101,8 @@
                                     @foreach (var ing in Model.Ingredients)
                                     {
                                         <tr class="animate__animated animate__fadeIn">
-                                            @* Ajustado para .Name (que existe no seu modelo Ingredient) *@
                                             <td class="fw-bold">@ing.Name</td>
                                             <td class="text-center">@ing.Quantity</td>
-                                            @* Ajustado para .Unit *@
                                             <td class="text-center">
                                                 <span class="badge bg-light text-dark border">@(string.IsNullOrEmpty(ing.Unit) ? "-" : ing.Unit)</span>
                                             </td>
@@ -138,5 +142,9 @@
 
     .table-hover tbody tr:hover {
         background-color: #f8fff9;
+    }
+
+    .bg-light {
+        background-color: #f8f9fa !important;
     }
 </style>

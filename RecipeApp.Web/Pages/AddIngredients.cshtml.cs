@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using RecipeApp.Web.Models;
-using RecipeApp.Web.Services;
+using RecipeApp.Models;
+using RecipeApp.Services;
 using System.Collections.Generic;
 
 namespace RecipeApp.Web.Pages
@@ -19,21 +19,21 @@ namespace RecipeApp.Web.Pages
             _ingredientService = ingredientService;
         }
 
+        // Propriedade para identificar a receita
         public long RecipeId { get; set; }
 
-        // Inicializamos com string.Empty para remover avisos de nulo
         public string RecipeTitle { get; set; } = string.Empty;
 
         public List<Ingredient> AllIngredients { get; set; } = new();
         public List<Ingredient> CurrentRecipeIngredients { get; set; } = new();
 
+        // MUDANÇA CHAVE: Agora recebemos o NOME (string) do datalist, não o ID para o utlizador ter opcao de escrever o nome do ingrediente.
         [BindProperty]
-        public long SelectedIngredientId { get; set; }
+        public string IngredientName { get; set; } = string.Empty;
 
         [BindProperty]
         public string Quantity { get; set; } = string.Empty;
 
-        // CORREÇÃO: Adicionada a propriedade Unit que faltava (Erro image_acd0be)
         [BindProperty]
         public string Unit { get; set; } = string.Empty;
 
@@ -42,15 +42,13 @@ namespace RecipeApp.Web.Pages
             var user = SessionHelper.GetUser(HttpContext);
             if (user == null) return RedirectToPage("/Login");
 
-            // Usando o método GetById que atualizámos no Service
             var recipe = _recipeService.GetById(recipeId);
             if (recipe == null) return RedirectToPage("/Index");
 
             RecipeId = recipeId;
             RecipeTitle = recipe.Title;
 
-            AllIngredients = _ingredientService.GetAllIngredients();
-            CurrentRecipeIngredients = _recipeService.GetRecipeIngredients(recipeId);
+            LoadData(recipeId);
 
             return Page();
         }
@@ -60,18 +58,26 @@ namespace RecipeApp.Web.Pages
             var user = SessionHelper.GetUser(HttpContext);
             if (user == null) return RedirectToPage("/Login");
 
-            if (SelectedIngredientId > 0 && !string.IsNullOrEmpty(Quantity))
+            // Validamos se o nome do ingrediente foi preenchido
+            if (!string.IsNullOrWhiteSpace(IngredientName) && !string.IsNullOrEmpty(Quantity))
             {
-                // Concatenamos a quantidade com a unidade se necessário, 
-                // ou passamos separadamente conforme a lógica do teu Service
+                // Concatenamos a quantidade com a unidade
                 string fullQuantity = string.IsNullOrEmpty(Unit) ? Quantity : $"{Quantity} {Unit}";
 
-                _recipeService.AddIngredientToRecipe(recipeId, SelectedIngredientId, fullQuantity);
+                // Agora enviamos IngredientName (string) para o Service
+                // Isso resolve o erro CS1503 (long para string)
+                _recipeService.AddIngredientToRecipe(recipeId, IngredientName, fullQuantity);
 
                 TempData["SuccessMessage"] = "Ingrediente adicionado!";
             }
 
             return RedirectToPage(new { recipeId });
+        }
+
+        private void LoadData(long recipeId)
+        {
+            AllIngredients = _ingredientService.GetAllIngredients();
+            CurrentRecipeIngredients = _recipeService.GetRecipeIngredients(recipeId);
         }
     }
 }

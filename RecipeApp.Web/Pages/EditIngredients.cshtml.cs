@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using RecipeApp.Web.Models;
-using RecipeApp.Web.Services;
+using RecipeApp.Models;
+using RecipeApp.Services;
 using System.Collections.Generic;
 
 namespace RecipeApp.Web.Pages
@@ -21,14 +21,15 @@ namespace RecipeApp.Web.Pages
         public List<Ingredient> Ingredients { get; set; } = new();
         public List<Ingredient> AllIngredients { get; set; } = new();
 
+        // MUDANÇA: De long para string para aceitar o texto do datalist
         [BindProperty]
-        public long SelectedIngredientId { get; set; }
+        public string IngredientName { get; set; } = string.Empty;
 
         [BindProperty]
-        public string Quantity { get; set; }
+        public string Quantity { get; set; } = string.Empty;
 
         [BindProperty]
-        public string Unit { get; set; }
+        public string Unit { get; set; } = string.Empty;
 
         public void OnGet(long recipeId)
         {
@@ -37,10 +38,14 @@ namespace RecipeApp.Web.Pages
 
         public IActionResult OnPostAdd(long recipeId)
         {
-            if (SelectedIngredientId > 0 && !string.IsNullOrEmpty(Quantity))
+            // Verificamos se o nome foi preenchido em vez do ID
+            if (!string.IsNullOrWhiteSpace(IngredientName) && !string.IsNullOrEmpty(Quantity))
             {
                 string fullQuantity = $"{Quantity} {Unit}".Trim();
-                _recipeService.AddIngredientToRecipe(recipeId, SelectedIngredientId, fullQuantity);
+
+                // Agora passamos a string IngredientName (Erro CS1503 resolvido)
+                _recipeService.AddIngredientToRecipe(recipeId, IngredientName, fullQuantity);
+
                 TempData["SuccessMessage"] = "Ingrediente adicionado!";
             }
             return RedirectToPage(new { recipeId });
@@ -55,13 +60,10 @@ namespace RecipeApp.Web.Pages
 
         private void LoadData(long recipeId)
         {
-            
-            Recipe = _recipeService.GetById(recipeId);
+            var r = _recipeService.GetById(recipeId);
+            if (r != null) Recipe = r;
 
-          
             Ingredients = _recipeService.GetRecipeIngredients(recipeId);
-
-
             AllIngredients = _ingredientService.GetAllIngredients();
         }
     }

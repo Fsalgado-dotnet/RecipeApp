@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using RecipeApp.Web.Models;
-using RecipeApp.Web.Services; // Importante, deu-me erro umas vezes por nao chamar a SessionHelper aqui
+using RecipeApp.Models;
+using RecipeApp.Services; // Importante, deu-me erro umas vezes por nao chamar a SessionHelper aqui
 
 namespace RecipeApp.Web.Pages.Admin
 {
