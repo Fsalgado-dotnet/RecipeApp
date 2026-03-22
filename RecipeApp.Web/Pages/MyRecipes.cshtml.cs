@@ -26,8 +26,11 @@ namespace RecipeApp.Web.Pages
             // 2. Obter Utilizador da Sessão
             var user = SessionHelper.GetUser(HttpContext);
 
+            // Ajuste defensivo: se a sessão expirou ou user é nulo
+            if (user == null) return RedirectToPage("/Login");
+
             // 3. Obter Receitas via Serviço
-            // Agora o DAL filtrará corretamente apenas as receitas ativas (IsApproved >= 0)
+            // O objeto 'recipe' que isto devolve já deve conter a propriedade RejectionReason
             Recipes = _recipeService.GetUserRecipes(user.UserId);
 
             return Page();
@@ -41,7 +44,6 @@ namespace RecipeApp.Web.Pages
             if (user == null) return RedirectToPage("/Login");
 
             // 2. Chamar o serviço de eliminação
-            // Com a nova RecipeDAL, isto agora limpa ingredientes, favoritos e a receita da DB
             bool success = _recipeService.DeleteRecipe(id, user.UserId);
 
             if (success)

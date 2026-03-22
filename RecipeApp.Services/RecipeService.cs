@@ -75,7 +75,17 @@ namespace RecipeApp.Services
 
         public void ApproveRecipe(long recipeId)
         {
+            // Na DAL, este método agora também limpa o RejectionReason
             _recipeDal.ApproveRecipe(recipeId);
+        }
+
+        // NOVO: Método para Reprovar com Feedback
+        public void RejectRecipe(long recipeId, string reason)
+        {
+            if (string.IsNullOrWhiteSpace(reason))
+                reason = "A receita não cumpre os requisitos da plataforma.";
+
+            _recipeDal.RejectRecipe(recipeId, reason);
         }
 
         // 9. Ingredientes (LÓGICA ACTUALIZADA)

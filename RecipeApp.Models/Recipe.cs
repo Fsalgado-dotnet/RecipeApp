@@ -45,6 +45,9 @@ namespace RecipeApp.Models
         // 🔐 Estado
         public bool IsApproved { get; set; }
 
+        // 💬 Feedback de Moderação 
+        public string? RejectionReason { get; set; }
+
         // 📅 Datas
         public DateTime CreatedAt { get; set; }
 

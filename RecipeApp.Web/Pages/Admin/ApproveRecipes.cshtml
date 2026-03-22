@@ -80,6 +80,34 @@
                                                         <i class="fas fa-check me-1"></i> Aprovar
                                                     </button>
                                                 </form>
+
+                                                <button type="button" class="btn btn-danger btn-sm rounded-pill px-4 shadow-sm hover-grow"
+                                                        data-bs-toggle="modal" data-bs-target="#rejectModal-@recipe.RecipeId">
+                                                    <i class="fas fa-times me-1"></i> Reprovar
+                                                </button>
+                                            </div>
+
+                                            <div class="modal fade text-start" id="rejectModal-@recipe.RecipeId" tabindex="-1">
+                                                <div class="modal-dialog modal-dialog-centered">
+                                                    <div class="modal-content border-0 shadow rounded-4">
+                                                        <form method="post" asp-page-handler="Reject">
+                                                            <div class="modal-header border-0 pt-4 px-4">
+                                                                <h5 class="fw-bold m-0">Reprovar Receita</h5>
+                                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                            </div>
+                                                            <div class="modal-body px-4">
+                                                                <p class="text-muted small">Explique ao autor o motivo da reprovação.</p>
+                                                                <input type="hidden" name="recipeId" value="@recipe.RecipeId" />
+                                                                <textarea name="reason" class="form-control rounded-3 border-light bg-light"
+                                                                  rows="4" placeholder="Ex: Faltam as quantidades nos ingredientes..." required></textarea>
+                                                            </div>
+                                                            <div class="modal-footer border-0 pb-4 px-4">
+                                                                <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                                                                <button type="submit" class="btn btn-danger rounded-pill px-4 shadow-sm">Confirmar</button>
+                                                            </div>
+                                                        </form>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </td>
                                     </tr>
@@ -94,7 +122,6 @@
 </div>
 
 <style>
-    /* Estilos específicos para moderação */
     .bg-warning-light {
         background-color: rgba(243, 156, 18, 0.1);
     }
@@ -111,11 +138,7 @@
             transform: scale(1.05);
         }
 
-    .table tbody tr {
-        transition: all 0.2s ease;
+    .table tbody tr:hover {
+        background-color: rgba(39, 174, 96, 0.02);
     }
-
-        .table tbody tr:hover {
-            background-color: rgba(39, 174, 96, 0.02);
-        }
 </style>

@@ -15,18 +15,13 @@ namespace RecipeApp.DAL
             _db = db;
         }
 
-        // --- GESTÃO DE INGREDIENTES (NOVO / ATUALIZADO) ---
+        // --- GESTÃO DE INGREDIENTES ---
 
-        /// <summary>
-        /// Procura um ingrediente pelo nome. Se não existir, cria-o.
-        /// Retorna sempre o ID do ingrediente (existente ou novo).
-        /// </summary>
         public long GetOrCreateIngredient(string name)
         {
             using var connection = _db.GetConnection();
             connection.Open();
 
-            // 1. Tentar encontrar o ingrediente pelo nome
             string selectSql = "SELECT IngredientId FROM Ingredient WHERE Name = @Name";
             using var selectCmd = new SqlCommand(selectSql, connection);
             selectCmd.Parameters.AddWithValue("@Name", name.Trim());
@@ -37,7 +32,6 @@ namespace RecipeApp.DAL
                 return Convert.ToInt64(result);
             }
 
-            // 2. Se não existir, inserir novo e retornar o ID gerado
             string insertSql = "INSERT INTO Ingredient (Name) VALUES (@Name); SELECT CAST(SCOPE_IDENTITY() AS BIGINT);";
             using var insertCmd = new SqlCommand(insertSql, connection);
             insertCmd.Parameters.AddWithValue("@Name", name.Trim());
@@ -48,7 +42,6 @@ namespace RecipeApp.DAL
         public void AddIngredientToRecipe(long rid, long iid, string qty)
         {
             using var connection = _db.GetConnection();
-            // Usamos um IF NOT EXISTS para evitar duplicados na tabela de ligação caso o user clique duas vezes
             string sql = @"
                 IF NOT EXISTS (SELECT 1 FROM RecipeIngredient WHERE RecipeId = @R AND IngredientId = @I)
                 BEGIN
@@ -102,6 +95,7 @@ namespace RecipeApp.DAL
         }
 
         // --- FAVORITOS ---
+
         public List<Recipe> GetFavoriteRecipes(long userId)
         {
             var recipes = new List<Recipe>();
@@ -146,7 +140,8 @@ namespace RecipeApp.DAL
             cmd.ExecuteNonQuery();
         }
 
-        // --- LISTAGEM GERAL (HOME) ---
+        // --- LISTAGEM ---
+
         public List<Recipe> GetApprovedRecipes(long? userId, string? searchTerm, long? categoryId, long? difficultyId, string sort = "Todas")
         {
             var recipes = new List<Recipe>();
@@ -183,6 +178,7 @@ namespace RecipeApp.DAL
         }
 
         // --- GESTÃO E ADMIN ---
+
         public List<Recipe> GetPendingRecipes()
         {
             var recipes = new List<Recipe>();
@@ -195,6 +191,7 @@ namespace RecipeApp.DAL
                 INNER JOIN Category c ON r.CategoryId = c.CategoryId
                 INNER JOIN Difficulty d ON r.DifficultyId = d.DifficultyId
                 WHERE r.IsApproved = 0 
+                     AND (r.RejectionReason IS NULL OR r.RejectionReason = '')
                 ORDER BY r.CreatedAt ASC";
 
             using var cmd = new SqlCommand(sql, connection);
@@ -247,7 +244,6 @@ namespace RecipeApp.DAL
             return reader.Read() ? MapFromReader(reader) : null;
         }
 
-        // --- CRUD BÁSICO ---
         public int CreateRecipe(Recipe r)
         {
             using var connection = _db.GetConnection();
@@ -270,7 +266,7 @@ namespace RecipeApp.DAL
         public void UpdateRecipe(Recipe r)
         {
             using var connection = _db.GetConnection();
-            string sql = "UPDATE Recipe SET Title=@T, PreparationMethod=@M, PreparationTime=@P, CategoryId=@C, DifficultyId=@D WHERE RecipeId=@Id";
+            string sql = "UPDATE Recipe SET Title=@T, PreparationMethod=@M, PreparationTime=@P, CategoryId=@C, DifficultyId=@D, RejectionReason = NULL WHERE RecipeId=@Id";
             using var cmd = new SqlCommand(sql, connection);
             cmd.Parameters.AddWithValue("@T", r.Title);
             cmd.Parameters.AddWithValue("@M", r.PreparationMethod);
@@ -282,52 +278,55 @@ namespace RecipeApp.DAL
             cmd.ExecuteNonQuery();
         }
 
-        /// <summary>
-        /// Elimina fisicamente uma receita e os seus dados relacionados (Ingredientes, Favoritos e Ratings).
-        /// </summary>
         public bool DeleteRecipe(long recipeId, long userId)
         {
             using var connection = _db.GetConnection();
             connection.Open();
             using var transaction = connection.BeginTransaction();
-
             try
             {
-                // Para apagar uma receita, temos de limpar as tabelas que dependem dela primeiro (Foreign Keys)
                 string sqlCleanup = @"
                     DELETE FROM RecipeIngredient WHERE RecipeId = @Rid;
                     DELETE FROM Favourite WHERE RecipeId = @Rid;
                     DELETE FROM Rating WHERE RecipeId = @Rid;
+                    DELETE FROM Comment WHERE RecipeId = @Rid;
                     DELETE FROM Recipe WHERE RecipeId = @Rid AND CreatedByUserId = @Uid;";
-
                 using var cmd = new SqlCommand(sqlCleanup, connection, transaction);
                 cmd.Parameters.AddWithValue("@Rid", recipeId);
                 cmd.Parameters.AddWithValue("@Uid", userId);
-
                 int rows = cmd.ExecuteNonQuery();
                 transaction.Commit();
                 return rows > 0;
             }
-            catch
-            {
-                transaction.Rollback();
-                throw;
-            }
+            catch { transaction.Rollback(); throw; }
         }
 
+        // limpa o motivo ao aprovar
         public void ApproveRecipe(long id)
         {
             using var connection = _db.GetConnection();
-            using var cmd = new SqlCommand("UPDATE Recipe SET IsApproved = 1 WHERE RecipeId = @Id", connection);
+            using var cmd = new SqlCommand("UPDATE Recipe SET IsApproved = 1, RejectionReason = NULL WHERE RecipeId = @Id", connection);
+            cmd.Parameters.AddWithValue("@Id", id);
+            connection.Open();
+            cmd.ExecuteNonQuery();
+        }
+
+        //  RejectRecipe no Service
+        public void RejectRecipe(long id, string reason)
+        {
+            using var connection = _db.GetConnection();
+            using var cmd = new SqlCommand("UPDATE Recipe SET IsApproved = 0, RejectionReason = @Reason WHERE RecipeId = @Id", connection);
+            cmd.Parameters.AddWithValue("@Reason", (object)reason ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@Id", id);
             connection.Open();
             cmd.ExecuteNonQuery();
         }
 
         // --- MAPEAMENTO ---
+
         private Recipe MapFromReader(SqlDataReader reader)
         {
-            return new Recipe
+            var recipe = new Recipe
             {
                 RecipeId = Convert.ToInt64(reader["RecipeId"]),
                 Title = reader["Title"]?.ToString() ?? "",
@@ -338,12 +337,20 @@ namespace RecipeApp.DAL
                 CreatedByUserId = Convert.ToInt64(reader["CreatedByUserId"]),
                 CategoryName = reader["CategoryName"]?.ToString() ?? "",
                 DifficultyName = reader["DifficultyName"]?.ToString() ?? "",
-                IsApproved = Convert.ToInt32(reader["IsApproved"]) == 1,
+                IsApproved = reader["IsApproved"] != DBNull.Value && Convert.ToBoolean(reader["IsApproved"]),
                 CreatedAt = Convert.ToDateTime(reader["CreatedAt"]),
                 AverageRating = reader.HasColumn("AverageRating") ? Convert.ToDouble(reader["AverageRating"]) : 0,
                 IsFavorite = reader.HasColumn("IsFavorite") && Convert.ToInt32(reader["IsFavorite"]) == 1,
                 IngredientsCount = reader.HasColumn("IngredientsCount") ? Convert.ToInt32(reader["IngredientsCount"]) : 0
             };
+
+            // Lê o RejectionReason se a coluna existir no SELECT
+            if (reader.HasColumn("RejectionReason"))
+            {
+                recipe.RejectionReason = reader["RejectionReason"]?.ToString();
+            }
+
+            return recipe;
         }
     }
 }

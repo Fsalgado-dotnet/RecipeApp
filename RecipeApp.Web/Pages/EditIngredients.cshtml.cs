@@ -43,7 +43,6 @@ namespace RecipeApp.Web.Pages
             {
                 string fullQuantity = $"{Quantity} {Unit}".Trim();
 
-                // Agora passamos a string IngredientName (Erro CS1503 resolvido)
                 _recipeService.AddIngredientToRecipe(recipeId, IngredientName, fullQuantity);
 
                 TempData["SuccessMessage"] = "Ingrediente adicionado!";

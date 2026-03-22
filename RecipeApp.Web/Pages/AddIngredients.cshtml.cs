@@ -65,13 +65,21 @@ namespace RecipeApp.Web.Pages
                 string fullQuantity = string.IsNullOrEmpty(Unit) ? Quantity : $"{Quantity} {Unit}";
 
                 // Agora enviamos IngredientName (string) para o Service
-                // Isso resolve o erro CS1503 (long para string)
                 _recipeService.AddIngredientToRecipe(recipeId, IngredientName, fullQuantity);
 
                 TempData["SuccessMessage"] = "Ingrediente adicionado!";
             }
 
             return RedirectToPage(new { recipeId });
+        }
+
+        public IActionResult OnPostFinish()
+        {
+            // Esta é a mensagem que queres que apareça quando o utilizador clica em Finalizar
+            TempData["SuccessMessage"] = "Receita submetida para aprovação com sucesso!";
+
+            // Redireciona para onde quiseres (Início ou As Minhas Receitas)
+            return RedirectToPage("/Index");
         }
 
         private void LoadData(long recipeId)
