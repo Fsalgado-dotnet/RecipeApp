@@ -17,9 +17,9 @@ namespace RecipeApp.DAL
 
         // --- GESTÃO DE INGREDIENTES ---
 
-        public long GetOrCreateIngredient(string name)
+        public long GetOrCreateIngredient(string name) // verifica se o nome existe , se nao cria um novo e devolve ID
         {
-            using var connection = _db.GetConnection();
+            using var connection = _db.GetConnection(); // garante que a ligação é fechadao auto quando terminamos mesmo que de erro
             connection.Open();
 
             string selectSql = "SELECT IngredientId FROM Ingredient WHERE Name = @Name";
@@ -52,11 +52,11 @@ namespace RecipeApp.DAL
                     UPDATE RecipeIngredient SET Quantity = @Q WHERE RecipeId = @R AND IngredientId = @I
                 END";
 
-            using var cmd = new SqlCommand(sql, connection);
-            cmd.Parameters.AddWithValue("@R", rid);
+            using var cmd = new SqlCommand(sql, connection); //Sql Command é o objecto que transporta a nossa query
+            cmd.Parameters.AddWithValue("@R", rid);          // sql até ao servidor
             cmd.Parameters.AddWithValue("@I", iid);
-            cmd.Parameters.AddWithValue("@Q", qty);
-            connection.Open();
+            cmd.Parameters.AddWithValue("@Q", qty);  // cmd.parameteres - protege sql injection dos users , nunca concatenamos strings nas querys
+            connection.Open();                       // define logo e converte os dados colocados (strings...)
             cmd.ExecuteNonQuery();
         }
 
@@ -71,7 +71,7 @@ namespace RecipeApp.DAL
             using var cmd = new SqlCommand(sql, connection);
             cmd.Parameters.AddWithValue("@Id", id);
             connection.Open();
-            using var reader = cmd.ExecuteReader();
+            using var reader = cmd.ExecuteReader();  // consultas a BD (select) para retornar um cursor linha a linha.
             while (reader.Read())
             {
                 list.Add(new Ingredient
@@ -91,7 +91,7 @@ namespace RecipeApp.DAL
             cmd.Parameters.AddWithValue("@R", rid);
             cmd.Parameters.AddWithValue("@I", iid);
             connection.Open();
-            cmd.ExecuteNonQuery();
+            cmd.ExecuteNonQuery();  // usado quando nao retorna dados (insert, update, delete)
         }
 
         // --- FAVORITOS ---

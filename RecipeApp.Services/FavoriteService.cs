@@ -6,7 +6,7 @@ namespace RecipeApp.Services
 {
     public class FavoriteService
     {
-        private readonly RecipeDAL _recipeDal; // Mudámos para RecipeDAL
+        private readonly RecipeDAL _recipeDal; 
 
         public FavoriteService(RecipeDAL recipeDal)
         {

@@ -17,7 +17,7 @@ namespace RecipeApp.DAL
         {
             var recipes = new List<Recipe>();
             using var connection = _db.GetConnection();
-            // Fazemos um JOIN para trazer os dados da receita junto com o favorito
+            //  JOIN para trazer os dados da receita junto com o favorito
             string sql = @"SELECT r.*, c.Name AS CategoryName, d.Name AS DifficultyName 
                            FROM Recipe r
                            INNER JOIN Favourite f ON r.RecipeId = f.RecipeId

@@ -1,6 +1,6 @@
 ﻿using RecipeApp.DAL;
 using RecipeApp.Models;
-using RecipeApp.Services; // Se tiveres aqui o PasswordHelper
+using RecipeApp.Services; // Se tiver aqui o PasswordHelper
 
 namespace RecipeApp.Services
 {

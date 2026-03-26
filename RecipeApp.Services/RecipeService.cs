@@ -79,7 +79,7 @@ namespace RecipeApp.Services
             _recipeDal.ApproveRecipe(recipeId);
         }
 
-        // NOVO: Método para Reprovar com Feedback
+        // Método para Reprovar com Feedback
         public void RejectRecipe(long recipeId, string reason)
         {
             if (string.IsNullOrWhiteSpace(reason))
@@ -94,10 +94,10 @@ namespace RecipeApp.Services
             return _recipeDal.GetIngredientsByRecipeId(recipeId);
         }
 
-        /// <summary>
+        
         /// Adiciona um ingrediente à receita. 
         /// Se o nome for fornecido e não existir na DB, ele é criado automaticamente.
-        /// </summary>
+        
         public void AddIngredientToRecipe(long recipeId, string ingredientName, string quantity)
         {
             if (string.IsNullOrWhiteSpace(ingredientName)) return;
@@ -114,7 +114,7 @@ namespace RecipeApp.Services
             _recipeDal.DeleteIngredientFromRecipe(recipeId, ingredientId);
         }
 
-        // 10. Auxiliares de Permissão
+        // 10. Auxiliares de Permissão (apenas o autor da receita ou um Administrador possam realizar operações críticas (como editar ou eliminar))
         public bool UserCanManageRecipe(long recipeId, long userId, bool isAdmin)
         {
             if (isAdmin) return true;

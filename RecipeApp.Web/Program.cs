@@ -49,19 +49,20 @@ var app = builder.Build();
 // ===============================
 if (!app.Environment.IsDevelopment())
 {
+    // erro + protocolo de segurança via HTTPS
     app.UseExceptionHandler("/Error");
     app.UseHsts();
 }
-
+// mudança forcada para HTTPS + Permitir ler ficheiros css do wwwroot
 app.UseHttpsRedirection();
 app.UseStaticFiles();
-
+// para decidir que pagina correr quando o user escrevre no URL
 app.UseRouting();
-
+// sesssionhelper - para lembrar quem é o utilizador a cada mudanca de pagina e cliques
 app.UseSession();
-
+// verifica se o user tem autorizacao para visitar a pagina pedida
 app.UseAuthorization();
-
+// configurar os endpoints das paginas .cshtml
 app.MapRazorPages();
 
 app.Run();

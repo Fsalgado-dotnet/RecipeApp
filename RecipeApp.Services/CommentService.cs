@@ -16,7 +16,7 @@ namespace RecipeApp.Services
         public void AddComment(long recipeId, long userId, string text)
         {
             // LÓGICA DE NEGÓCIO: Validar se o texto não é nulo ou apenas espaços
-            if (string.IsNullOrWhiteSpace(text))
+            if (string.IsNullOrWhiteSpace(text))  // caso o user envie o comentario vazio
             {
                 throw new ArgumentException("O comentário não pode estar vazio.");
             }

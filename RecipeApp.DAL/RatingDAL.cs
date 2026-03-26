@@ -16,8 +16,7 @@ namespace RecipeApp.DAL
         {
             using var connection = _db.GetConnection();
 
-            // CORREÇÃO: Removida a coluna 'CreatedAt' que causava o erro SqlException
-            // A tua tabela Rating só tem: RatingId, RecipeId, UserId, Value
+            // A tabela Rating só tem: RatingId, RecipeId, UserId, Value
             string sql = @"
                 IF EXISTS (SELECT 1 FROM Rating WHERE RecipeId = @RecipeId AND UserId = @UserId)
                 BEGIN
@@ -35,7 +34,7 @@ namespace RecipeApp.DAL
             cmd.Parameters.AddWithValue("@Value", value);
 
             connection.Open();
-            // Já não vai "rebentar" aqui
+            
             cmd.ExecuteNonQuery();
         }
 

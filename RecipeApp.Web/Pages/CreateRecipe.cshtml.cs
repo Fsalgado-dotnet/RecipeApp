@@ -32,7 +32,7 @@ namespace RecipeApp.Web.Pages
 
         public IActionResult OnGet()
         {
-            // Verifica se o utilizador está logado usando o Helper que movemos para os Services
+            // Verifica se o utilizador está logado usando o Helper que movi para os Services
             if (!SessionHelper.IsLoggedIn(HttpContext))
                 return RedirectToPage("/Login");
 
@@ -53,7 +53,7 @@ namespace RecipeApp.Web.Pages
             }
 
             // 1. Criamos a receita e guardamos o ID gerado pelo banco de dados
-            // Nota: O teu RecipeService.CreateRecipe deve retornar int (o ID da receita)
+            
             int newRecipeId = _recipeService.CreateRecipe(Recipe, user.UserId);
 
             // 2. Mensagem de feedback para o utilizador

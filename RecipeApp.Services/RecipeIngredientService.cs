@@ -20,7 +20,7 @@ namespace RecipeApp.Services
                 throw new ArgumentException("A quantidade deve ser maior que zero.");
             }
 
-            // REGRA DE NEGÓCIO: Normalizar texto da unidade (ex: sempre minúsculas)
+            // REGRA DE NEGÓCIO: Normalizar texto da unidade 
             ri.Unit = ri.Unit?.Trim().ToLower() ?? string.Empty;
 
             _recipeIngredientDal.Add(ri);
